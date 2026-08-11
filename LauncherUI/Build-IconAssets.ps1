@@ -31,24 +31,24 @@ public static class WinBridgeIconBuilder
     {
         Bitmap image = new Bitmap(1024, 1024, PixelFormat.Format32bppArgb);
         using (Graphics g = Graphics.FromImage(image))
-        using (GraphicsPath coolLink = Capsule(new RectangleF(222, 370, 580, 284), 42f))
-        using (GraphicsPath warmLink = Capsule(new RectangleF(222, 370, 580, 284), -42f))
+        using (GraphicsPath coolLink = Capsule(new RectangleF(141, 330, 742, 364), 42f))
+        using (GraphicsPath warmLink = Capsule(new RectangleF(141, 330, 742, 364), -42f))
         {
             Configure(g);
             g.Clear(Color.Transparent);
 
-            using (Pen coolGlow = new Pen(Color.FromArgb(74, 42, 210, 255), 104f))
-            using (Pen warmGlow = new Pen(Color.FromArgb(70, 255, 64, 196), 104f))
-            using (Pen coolEdge = new Pen(Color.FromArgb(190, 7, 16, 36), 78f))
-            using (Pen warmEdge = new Pen(Color.FromArgb(190, 7, 16, 36), 78f))
+            using (Pen coolGlow = new Pen(Color.FromArgb(74, 42, 210, 255), 124f))
+            using (Pen warmGlow = new Pen(Color.FromArgb(70, 255, 64, 196), 124f))
+            using (Pen coolEdge = new Pen(Color.FromArgb(190, 7, 16, 36), 96f))
+            using (Pen warmEdge = new Pen(Color.FromArgb(190, 7, 16, 36), 96f))
             using (LinearGradientBrush coolBrush = new LinearGradientBrush(
                 new PointF(240, 760), new PointF(790, 260),
                 Color.FromArgb(255, 47, 226, 255), Color.FromArgb(255, 75, 111, 255)))
             using (LinearGradientBrush warmBrush = new LinearGradientBrush(
                 new PointF(250, 250), new PointF(790, 780),
                 Color.FromArgb(255, 142, 91, 255), Color.FromArgb(255, 255, 68, 173)))
-            using (Pen cool = new Pen(coolBrush, 56f))
-            using (Pen warm = new Pen(warmBrush, 56f))
+            using (Pen cool = new Pen(coolBrush, 72f))
+            using (Pen warm = new Pen(warmBrush, 72f))
             {
                 Prepare(coolGlow); Prepare(warmGlow);
                 Prepare(coolEdge); Prepare(warmEdge);
@@ -65,7 +65,7 @@ public static class WinBridgeIconBuilder
                 GraphicsState state = g.Save();
                 using (GraphicsPath crossing = new GraphicsPath())
                 {
-                    crossing.AddEllipse(new RectangleF(315, 285, 265, 265));
+                    crossing.AddEllipse(new RectangleF(260, 222, 339, 339));
                     g.SetClip(crossing, CombineMode.Intersect);
                     g.DrawPath(coolEdge, coolLink);
                     g.DrawPath(cool, coolLink);
