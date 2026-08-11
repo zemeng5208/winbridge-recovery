@@ -8,7 +8,7 @@ param(
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
-$script:ToolVersion = '1.5.3'
+$script:ToolVersion = '3.0.0'
 $script:ToolRoot = $PSScriptRoot
 $script:LogsRoot = Join-Path $script:ToolRoot 'Logs'
 $script:BackupsRoot = 'D:\CodexPluginRepairBackups'
@@ -613,6 +613,20 @@ function Get-PluginVersion {
   return $version
 }
 
+function Get-OfficialRelativePath {
+  param(
+    [Parameter(Mandatory = $true)][string]$Value,
+    [Parameter(Mandatory = $true)][string]$FieldName
+  )
+  $relative = $Value.Replace('/', '\').Trim().TrimStart('\')
+  if ([string]::IsNullOrWhiteSpace($relative) -or
+      [System.IO.Path]::IsPathRooted($relative) -or
+      @($relative.Split('\') | Where-Object { $_ -eq '..' }).Count -gt 0) {
+    throw "Official cua_node manifest contains an unsafe $FieldName path: $Value"
+  }
+  return $relative
+}
+
 function Get-CurrentContext {
   $package = Get-AppxPackage -Name 'OpenAI.Codex' -ErrorAction SilentlyContinue |
     Sort-Object Version -Descending |
@@ -636,14 +650,42 @@ function Get-CurrentContext {
     'codex-windows-sandbox-setup.exe',
     'codex-command-runner.exe'
   )
-  $cuaHashFiles = @('manifest.json', 'bin/node.exe', 'bin/node_repl.exe')
-  $cliContentHash = Get-ContentDirectoryHash $resources $cliFiles
   $cuaRoot = Join-Path $resources 'cua_node'
+  $cuaManifestPath = Join-Path $cuaRoot 'manifest.json'
+  if (-not (Test-Path -LiteralPath $cuaManifestPath -PathType Leaf)) {
+    throw "Installed package has no cua_node manifest: $cuaManifestPath"
+  }
+  $cuaManifest = Read-JsonFile $cuaManifestPath
+  $cuaNodeRelative = Get-OfficialRelativePath ([string]$cuaManifest.node_path) 'node_path'
+  $cuaNodeReplRelative = Get-OfficialRelativePath ([string]$cuaManifest.node_repl_path) 'node_repl_path'
+  $cuaNodeModulesRelative = Get-OfficialRelativePath ([string]$cuaManifest.node_modules) 'node_modules'
+  $cuaBinRelative = Split-Path -Parent $cuaNodeRelative
+  if ([string]::IsNullOrWhiteSpace($cuaBinRelative) -or
+      (Split-Path -Parent $cuaNodeReplRelative) -ne $cuaBinRelative -or
+      (Split-Path -Parent $cuaNodeModulesRelative) -ne $cuaBinRelative) {
+    throw 'Official cua_node manifest uses incompatible runtime roots.'
+  }
+  $cuaHashFiles = @('manifest.json', $cuaNodeRelative, $cuaNodeReplRelative)
+  $cliContentHash = Get-ContentDirectoryHash $resources $cliFiles
   $cuaContentHash = Get-ContentDirectoryHash $cuaRoot $cuaHashFiles
+  $bundledHashFiles = @(
+    '.agents\plugins\marketplace.json',
+    'plugins\browser\.codex-plugin\plugin.json',
+    'plugins\browser\scripts\browser-client.mjs',
+    'plugins\chrome\.codex-plugin\plugin.json',
+    'plugins\chrome\scripts\browser-client.mjs',
+    'plugins\computer-use\.codex-plugin\plugin.json',
+    'plugins\computer-use\skills\computer-use\SKILL.md'
+  )
+  $bundledContentHash = Get-ContentDirectoryHash $sourceMarketplace $bundledHashFiles
   $officialCliRoot = Join-Path $env:LOCALAPPDATA ("OpenAI\Codex\bin\{0}" -f $cliContentHash)
   $safeRuntimeRoot = Join-Path $env:LOCALAPPDATA ("OpenAI\Codex\runtimes\cua_node\{0}" -f $cuaContentHash)
-  $packageBuild = ([string]$package.Version).Split('.')[-1]
-  $resourceMirrorKey = 'p{0}-c{1}-n{2}' -f $packageBuild, $cliContentHash.Substring(0, 8), $cuaContentHash.Substring(0, 8)
+  $packageVersionToken = ([string]$package.Version).Replace('.', '-')
+  $resourceMirrorKey = 'p{0}-b{1}-c{2}-n{3}' -f `
+    $packageVersionToken,
+    $bundledContentHash.Substring(0, 8),
+    $cliContentHash.Substring(0, 8),
+    $cuaContentHash.Substring(0, 8)
   $resourceMirrorRoot = Join-Path $script:ToolRoot (Join-Path 'R' $resourceMirrorKey)
   $resourceMirrorDirectories = @(
     'plugins\openai-bundled',
@@ -655,13 +697,15 @@ function Get-CurrentContext {
   $resourceMirrorCriticalFiles = @(
     'plugins\openai-bundled\.agents\plugins\marketplace.json',
     'plugins\openai-bundled\plugins\browser\.codex-plugin\plugin.json',
+    'plugins\openai-bundled\plugins\browser\scripts\browser-client.mjs',
     'plugins\openai-bundled\plugins\chrome\.codex-plugin\plugin.json',
+    'plugins\openai-bundled\plugins\chrome\scripts\browser-client.mjs',
     'plugins\openai-bundled\plugins\computer-use\.codex-plugin\plugin.json',
+    'plugins\openai-bundled\plugins\computer-use\skills\computer-use\SKILL.md',
     'plugins\openai-bundled\plugins\sites\.app.json',
     'cua_node\manifest.json',
-    'cua_node\bin\node.exe',
-    'cua_node\bin\node_repl.exe',
-    'cua_node\bin\CHANGELOG.md'
+    (Join-Path 'cua_node' $cuaNodeRelative),
+    (Join-Path 'cua_node' $cuaNodeReplRelative)
   ) + $resourceMirrorFiles
   return [pscustomobject]@{
     Package = $package
@@ -683,9 +727,21 @@ function Get-CurrentContext {
     CliFiles = $cliFiles
     CliContentHash = $cliContentHash
     CuaContentHash = $cuaContentHash
+    BundledContentHash = $bundledContentHash
     OfficialCliRoot = $officialCliRoot
     SafeRuntimeRoot = $safeRuntimeRoot
-    SafeNodeBin = Join-Path $safeRuntimeRoot 'bin'
+    SafeNodeBin = Join-Path $safeRuntimeRoot $cuaBinRelative
+    SafeNodePath = Join-Path $safeRuntimeRoot $cuaNodeRelative
+    SafeNodeReplPath = Join-Path $safeRuntimeRoot $cuaNodeReplRelative
+    SafeNodeModulesPath = Join-Path $safeRuntimeRoot $cuaNodeModulesRelative
+    CuaBinRelative = $cuaBinRelative
+    CuaBinSource = Join-Path $cuaRoot $cuaBinRelative
+    CuaNodeRelative = $cuaNodeRelative
+    CuaNodeReplRelative = $cuaNodeReplRelative
+    CuaNodeModulesRelative = $cuaNodeModulesRelative
+    MirrorNodeRelative = Join-Path 'cua_node' $cuaNodeRelative
+    MirrorNodeReplRelative = Join-Path 'cua_node' $cuaNodeReplRelative
+    MirrorNodeModulesRelative = Join-Path 'cua_node' $cuaNodeModulesRelative
     ResourceMirrorKey = $resourceMirrorKey
     ResourceMirrorRoot = $resourceMirrorRoot
     ResourceMirrorMarker = Join-Path $resourceMirrorRoot '.codex-official-resources.json'
@@ -885,11 +941,20 @@ function Get-ResourceMirrorIssues {
     if ([string]$marker.packageFullName -ne $Context.PackageFullName) {
       [void]$issues.Add('official resources mirror package identity is stale')
     }
+    if ([int]$marker.schemaVersion -lt 2) {
+      [void]$issues.Add('official resources mirror schema is stale')
+    }
+    if ([string]$marker.packageVersion -ne $Context.PackageVersion) {
+      [void]$issues.Add('official resources mirror package version is stale')
+    }
     if ([string]$marker.resourceMirrorKey -ne $Context.ResourceMirrorKey) {
       [void]$issues.Add('official resources mirror content key is stale')
     }
     if ([string]$marker.cliContentHash -ne $Context.CliContentHash -or [string]$marker.cuaContentHash -ne $Context.CuaContentHash) {
       [void]$issues.Add('official resources mirror helper hashes are stale')
+    }
+    if ([string]$marker.bundledContentHash -ne $Context.BundledContentHash) {
+      [void]$issues.Add('official resources mirror bundled plugin hash is stale')
     }
   } catch {
     [void]$issues.Add('official resources mirror marker is invalid JSON')
@@ -949,7 +1014,7 @@ function Ensure-OfficialResourcesMirror {
     Copy-FileBytesVerified (Join-Path $Context.Resources ([string]$relative)) (Join-Path $stage ([string]$relative))
   }
   $marker = [ordered]@{
-    schemaVersion = 1
+    schemaVersion = 2
     createdAt = [DateTime]::UtcNow.ToString('o')
     toolVersion = $script:ToolVersion
     packageFullName = $Context.PackageFullName
@@ -957,6 +1022,8 @@ function Ensure-OfficialResourcesMirror {
     resourceMirrorKey = $Context.ResourceMirrorKey
     cliContentHash = $Context.CliContentHash
     cuaContentHash = $Context.CuaContentHash
+    bundledContentHash = $Context.BundledContentHash
+    pluginVersions = $Context.PluginVersions
   }
   Write-JsonFile (Join-Path $stage '.codex-official-resources.json') $marker
   $stageIssues = @(Get-ResourceMirrorIssues $Context $stage)
@@ -995,7 +1062,7 @@ function Get-StateIssues {
       [void]$issues.Add("$name latest junction targets $target")
     }
   }
-  $sourceSky = Join-Path $Context.Resources 'cua_node\bin\node_modules\@oai\sky'
+  $sourceSky = Join-Path $Context.Resources (Join-Path $Context.MirrorNodeModulesRelative '@oai\sky')
   $cuVersion = [string]$Context.PluginVersions['computer-use']
   $cacheSky = Join-Path $Context.CacheRoot "computer-use\$cuVersion\node_modules\@oai\sky"
   foreach ($difference in @(Get-DirectoryDifferences $sourceSky $cacheSky)) {
@@ -1016,16 +1083,19 @@ function Get-StateIssues {
       [void]$issues.Add("official CLI helper hash mismatch: $name")
     }
   }
-  foreach ($relative in @('node.exe', 'node_repl.exe')) {
-    $source = Join-Path $Context.Resources "cua_node\bin\$relative"
-    $target = Join-Path $Context.SafeNodeBin $relative
+  foreach ($runtimeFile in @(
+    [pscustomobject]@{ Name = 'node'; Source = Join-Path $Context.Resources $Context.MirrorNodeRelative; Target = $Context.SafeNodePath },
+    [pscustomobject]@{ Name = 'node_repl'; Source = Join-Path $Context.Resources $Context.MirrorNodeReplRelative; Target = $Context.SafeNodeReplPath }
+  )) {
+    $source = [string]$runtimeFile.Source
+    $target = [string]$runtimeFile.Target
     if (-not (Test-Path -LiteralPath $target -PathType Leaf)) {
-      [void]$issues.Add("safe runtime missing: $relative")
+      [void]$issues.Add("safe runtime missing: $($runtimeFile.Name)")
     } elseif ((Get-FileSha256 $source) -ne (Get-FileSha256 $target)) {
-      [void]$issues.Add("safe runtime hash mismatch: $relative")
+      [void]$issues.Add("safe runtime hash mismatch: $($runtimeFile.Name)")
     }
   }
-  $runtimeDiff = @(Get-DirectoryDifferences (Join-Path $Context.Resources 'cua_node\bin') $Context.SafeNodeBin)
+  $runtimeDiff = @(Get-DirectoryDifferences $Context.CuaBinSource $Context.SafeNodeBin)
   if ($runtimeDiff.Count -gt 0) {
     [void]$issues.Add("safe runtime tree differs from the current package ($($runtimeDiff.Count) file issue(s))")
   }
@@ -1042,8 +1112,8 @@ function Get-StateIssues {
   $nodeTable = Get-TomlTableText $Context.ConfigPath '[mcp_servers.node_repl]'
   $nodeEnvTable = Get-TomlTableText $Context.ConfigPath '[mcp_servers.node_repl.env]'
   $validNodeReplPaths = @(
-    (Join-Path $Context.SafeNodeBin 'node_repl.exe'),
-    (Join-Path $Context.ResourceMirrorRoot 'cua_node\bin\node_repl.exe')
+    $Context.SafeNodeReplPath,
+    (Join-Path $Context.ResourceMirrorRoot $Context.MirrorNodeReplRelative)
   )
   $validCliPaths = @(
     (Join-Path $Context.OfficialCliRoot 'codex.exe'),
@@ -1059,9 +1129,9 @@ function Get-StateIssues {
   $chromeVersionRoot = Join-Path $Context.CacheRoot "chrome\$chromeVersion"
   $expectedHost = Join-Path $chromeVersionRoot 'extension-host\windows\x64\extension-host.exe'
   $expectedBrowserClient = Join-Path $chromeVersionRoot 'scripts\browser-client.mjs'
-  $expectedNode = Join-Path $Context.SafeNodeBin 'node.exe'
-  $expectedNodeRepl = Join-Path $Context.SafeNodeBin 'node_repl.exe'
-  $expectedNodeModules = Join-Path $Context.SafeNodeBin 'node_modules'
+  $expectedNode = $Context.SafeNodePath
+  $expectedNodeRepl = $Context.SafeNodeReplPath
+  $expectedNodeModules = $Context.SafeNodeModulesPath
   $expectedExtensionId = 'hehggadaopoacecdllhhajmbjkdcmajg'
   $expectedOrigin = 'chrome-extension://' + $expectedExtensionId + '/'
   if (-not (Test-Path -LiteralPath $Context.NativeManifestPath -PathType Leaf)) {
@@ -1123,8 +1193,8 @@ function Get-StateIssues {
             codexCliPath = @((Join-Path $Context.OfficialCliRoot 'codex.exe'), (Join-Path $Context.AppServerRoot 'codex.exe'), (Join-Path $Context.ResourceMirrorRoot 'codex.exe'))
             codexHome = @($Context.CodexHome)
             extensionHostPath = @($expectedHost, (Join-Path $Context.CacheRoot 'chrome\latest\extension-host\windows\x64\extension-host.exe'))
-            nodePath = @($expectedNode, (Join-Path $Context.ResourceMirrorRoot 'cua_node\bin\node.exe'))
-            nodeReplPath = @($expectedNodeRepl, (Join-Path $Context.ResourceMirrorRoot 'cua_node\bin\node_repl.exe'))
+            nodePath = @($expectedNode, (Join-Path $Context.ResourceMirrorRoot $Context.MirrorNodeRelative))
+            nodeReplPath = @($expectedNodeRepl, (Join-Path $Context.ResourceMirrorRoot $Context.MirrorNodeReplRelative))
             resourcesPath = @($Context.ResourceMirrorRoot)
           }
           foreach ($pathName in $expectedPaths.Keys) {
@@ -1132,7 +1202,7 @@ function Get-StateIssues {
               [void]$issues.Add("chrome-native-hosts-v2 path is stale: $pathName")
             }
           }
-          $validNodeModuleDirs = @($expectedNodeModules, (Join-Path $Context.ResourceMirrorRoot 'cua_node\bin\node_modules'))
+          $validNodeModuleDirs = @($expectedNodeModules, (Join-Path $Context.ResourceMirrorRoot $Context.MirrorNodeModulesRelative))
           if (@($entry.paths.nodeModuleDirs | Where-Object { $validNodeModuleDirs -contains [string]$_ }).Count -eq 0) {
             [void]$issues.Add('chrome-native-hosts-v2 nodeModuleDirs is stale')
           }
@@ -1152,6 +1222,7 @@ function Write-Diagnosis {
   )
   Write-Log "Package: $($Context.PackageFullName)"
   Write-Log "Signature: $($Context.SignatureKind)"
+  Write-Log "Official bundled plugin content hash: $($Context.BundledContentHash)"
   Write-Log "Official CLI content hash: $($Context.CliContentHash)"
   Write-Log "Official CUA content hash: $($Context.CuaContentHash)"
   Write-Log "Official resources mirror: $($Context.ResourceMirrorRoot)"
@@ -1354,15 +1425,21 @@ function New-RepairBackup {
     }
     Write-JsonFile (Join-Path $backupRoot 'metadata.json') $metadata
     $manifest = @()
-    foreach ($file in (Get-ChildItem -LiteralPath $backupRoot -File -Recurse -Force | Where-Object { $_.Name -ne '.incomplete' -and $_.Name -ne 'sha256-manifest.json' })) {
-      $relative = $file.FullName.Substring($backupRoot.Length).TrimStart('\')
-      $manifest += [pscustomobject]@{ relativePath = $relative; length = $file.Length; sha256 = Get-FileSha256 $file.FullName }
+    foreach ($file in (Get-DirectoryFileRecords $backupRoot)) {
+      $fileName = [System.IO.Path]::GetFileName([string]$file.Relative)
+      if ($fileName -eq '.incomplete' -or $fileName -eq 'sha256-manifest.json') { continue }
+      $manifest += [pscustomobject]@{
+        relativePath = [string]$file.Relative
+        length = [int64]$file.Length
+        sha256 = Get-FileSha256 ([string]$file.Path)
+      }
     }
     Write-JsonFile (Join-Path $backupRoot 'sha256-manifest.json') $manifest
     foreach ($entry in $manifest) {
       $path = Join-Path $backupRoot ([string]$entry.relativePath)
-      if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Backup validation missing file: $path" }
-      if ((Get-Item -LiteralPath $path).Length -ne [int64]$entry.length) { throw "Backup length mismatch: $path" }
+      $pathLong = Get-LongPath $path
+      if (-not [System.IO.File]::Exists($pathLong)) { throw "Backup validation missing file: $path" }
+      if ((New-Object System.IO.FileInfo($pathLong)).Length -ne [int64]$entry.length) { throw "Backup length mismatch: $path" }
       if ((Get-FileSha256 $path) -ne [string]$entry.sha256) { throw "Backup hash mismatch: $path" }
     }
     Remove-Item -LiteralPath $incomplete -Force
@@ -1391,8 +1468,9 @@ function Test-Backup {
   $manifest = @(Read-JsonFile $manifestPath)
   foreach ($entry in $manifest) {
     $path = Join-Path $BackupRoot ([string]$entry.relativePath)
-    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Backup file is missing: $path" }
-    if ((Get-Item -LiteralPath $path).Length -ne [int64]$entry.length) { throw "Backup file length mismatch: $path" }
+    $pathLong = Get-LongPath $path
+    if (-not [System.IO.File]::Exists($pathLong)) { throw "Backup file is missing: $path" }
+    if ((New-Object System.IO.FileInfo($pathLong)).Length -ne [int64]$entry.length) { throw "Backup file length mismatch: $path" }
     if ((Get-FileSha256 $path) -ne [string]$entry.sha256) { throw "Backup file hash mismatch: $path" }
   }
   return (Read-JsonFile $metadataPath)
@@ -1528,7 +1606,7 @@ function Ensure-OfficialCliRuntime {
 
 function Ensure-SafeNodeRuntime {
   param([Parameter(Mandatory = $true)][object]$Context)
-  $sourceBin = Join-Path $Context.Resources 'cua_node\bin'
+  $sourceBin = $Context.CuaBinSource
   $existingIssues = @(Get-DirectoryDifferences $sourceBin $Context.SafeNodeBin)
   if ($existingIssues.Count -eq 0) {
     Write-Log "Safe Node runtime already matches package $($Context.PackageVersion)." 'OK'
@@ -1561,7 +1639,7 @@ function New-PreparedPluginCache {
   $sourcePlugin = Join-Path $Context.SourceMarketplace "plugins\$PluginName"
   Copy-DirectoryVerified $sourcePlugin $versionRoot
   if ($PluginName -eq 'computer-use') {
-    $sourceSky = Join-Path $Context.Resources 'cua_node\bin\node_modules\@oai\sky'
+    $sourceSky = Join-Path $Context.Resources (Join-Path $Context.MirrorNodeModulesRelative '@oai\sky')
     $targetSky = Join-Path $versionRoot 'node_modules\@oai\sky'
     Copy-DirectoryVerified $sourceSky $targetSky
   }
@@ -1595,9 +1673,9 @@ function Update-CodexConfig {
   foreach ($name in @('browser', 'chrome', 'computer-use')) {
     Set-TomlTable $Context.ConfigPath ('[plugins."' + $name + '@openai-bundled"]') ([ordered]@{ enabled = $true })
   }
-  $nodeRepl = Join-Path $Context.ResourceMirrorRoot 'cua_node\bin\node_repl.exe'
-  $node = Join-Path $Context.ResourceMirrorRoot 'cua_node\bin\node.exe'
-  $nodeModules = Join-Path $Context.ResourceMirrorRoot 'cua_node\bin\node_modules'
+  $nodeRepl = Join-Path $Context.ResourceMirrorRoot $Context.MirrorNodeReplRelative
+  $node = Join-Path $Context.ResourceMirrorRoot $Context.MirrorNodeRelative
+  $nodeModules = Join-Path $Context.ResourceMirrorRoot $Context.MirrorNodeModulesRelative
   $codexCli = Join-Path $Context.ResourceMirrorRoot 'codex.exe'
   $browserClient = Join-Path $Context.ResourceMirrorRoot 'plugins\openai-bundled\plugins\browser\scripts\browser-client.mjs'
   $chromeClient = Join-Path $Context.ResourceMirrorRoot 'plugins\openai-bundled\plugins\chrome\scripts\browser-client.mjs'
@@ -1647,9 +1725,9 @@ function Update-NativeHost {
     if (-not (Test-Path -LiteralPath $registryPath)) { New-Item -Path $registryPath -Force | Out-Null }
     Set-Item -LiteralPath $registryPath -Value $Context.NativeManifestPath
   }
-  $node = Join-Path $Context.ResourceMirrorRoot 'cua_node\bin\node.exe'
-  $nodeRepl = Join-Path $Context.ResourceMirrorRoot 'cua_node\bin\node_repl.exe'
-  $nodeModules = Join-Path $Context.ResourceMirrorRoot 'cua_node\bin\node_modules'
+  $node = Join-Path $Context.ResourceMirrorRoot $Context.MirrorNodeRelative
+  $nodeRepl = Join-Path $Context.ResourceMirrorRoot $Context.MirrorNodeReplRelative
+  $nodeModules = Join-Path $Context.ResourceMirrorRoot $Context.MirrorNodeModulesRelative
   $codexCli = Join-Path $Context.AppServerRoot 'codex.exe'
   $extensionId = 'hehggadaopoacecdllhhajmbjkdcmajg'
   $entry = $null
@@ -2148,6 +2226,11 @@ function Invoke-Main {
     return
   }
   $context = Get-CurrentContext
+  Write-Log ("Adaptive package contract: package={0}; bundled={1}; cli={2}; cua={3}" -f `
+    $context.PackageVersion,
+    $context.BundledContentHash,
+    $context.CliContentHash,
+    $context.CuaContentHash)
   if (Test-Path -LiteralPath $script:PendingTransactionPath -PathType Leaf) {
     $pending = Read-JsonFile $script:PendingTransactionPath
     $pendingPhase = if ($pending.PSObject.Properties['phase']) { [string]$pending.phase } else { 'repairing' }

@@ -107,7 +107,7 @@ if ($PruneResourceMirrors) {
     $mirrors = @(
       Get-ChildItem -LiteralPath $mirrorRoot -Directory -Force |
         Where-Object {
-          $_.Name -match '^p[0-9]+-c[0-9a-f]+-n[0-9a-f]+$' -and
+          $_.Name -match '^p[0-9]+(?:-[0-9]+)*-(?:b[0-9a-f]+-)?c[0-9a-f]+-n[0-9a-f]+$' -and
           -not (Test-Path -LiteralPath (Join-Path $_.FullName '.incomplete'))
         } |
         Sort-Object LastWriteTimeUtc, Name -Descending
@@ -159,7 +159,7 @@ if ($PruneResourceMirrors) {
     }
     $remainingMirrors = @(
       Get-ChildItem -LiteralPath $mirrorRoot -Directory -Force |
-        Where-Object Name -Match '^p[0-9]+-c[0-9a-f]+-n[0-9a-f]+$'
+        Where-Object Name -Match '^p[0-9]+(?:-[0-9]+)*-(?:b[0-9a-f]+-)?c[0-9a-f]+-n[0-9a-f]+$'
     )
     if ($remainingMirrors.Count -gt $ResourceMirrorLimit) {
       throw "Resource mirror retention did not reach $ResourceMirrorLimit."
