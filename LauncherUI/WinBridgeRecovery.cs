@@ -302,6 +302,7 @@ namespace WinBridgeRecovery
         private ThemeSettingsWindow _themeWindow;
         private LauncherSettingsWindow _settingsWindow;
         private GeneralSettingsWindow _generalWindow;
+        private SocialFeedWindow _socialFeedWindow;
         private LauncherThemeSettings _themeSettings;
         private LauncherGeneralSettings _generalSettings;
         private bool _closingAfterSuccess;
@@ -1181,10 +1182,33 @@ namespace WinBridgeRecovery
                 {
                     if (_settingsWindow != null) _settingsWindow.Close();
                     OpenGameSelector();
+                },
+                delegate
+                {
+                    if (_settingsWindow != null) _settingsWindow.Close();
+                    OpenSocialFeed();
                 });
             _settingsWindow.Owner = this;
             _settingsWindow.Closed += delegate { _settingsWindow = null; };
             _settingsWindow.Show();
+        }
+
+        private void OpenSocialFeed()
+        {
+            if (_socialFeedWindow != null)
+            {
+                if (_socialFeedWindow.WindowState == WindowState.Minimized)
+                    _socialFeedWindow.WindowState = WindowState.Normal;
+                _socialFeedWindow.Activate();
+                return;
+            }
+            string iconPath = System.IO.Path.Combine(
+                _root, "LauncherUI", "Assets", "WinBridge.png");
+            string stateDirectory = System.IO.Path.Combine(_root, "LauncherUI", "State");
+            _socialFeedWindow = new SocialFeedWindow(iconPath, stateDirectory);
+            _socialFeedWindow.Owner = this;
+            _socialFeedWindow.Closed += delegate { _socialFeedWindow = null; };
+            _socialFeedWindow.Show();
         }
 
         private void OpenGeneralSettings()
@@ -2104,6 +2128,11 @@ namespace WinBridgeRecovery
                 _generalWindow.Close();
                 _generalWindow = null;
             }
+            if (_socialFeedWindow != null)
+            {
+                _socialFeedWindow.Close();
+                _socialFeedWindow = null;
+            }
         }
 
         private static BitmapImage LoadBitmap(string path)
@@ -2485,23 +2514,26 @@ namespace WinBridgeRecovery
         private readonly Action _openGeneral;
         private readonly Action _openTheme;
         private readonly Action _openGames;
+        private readonly Action _openSocial;
 
         public LauncherSettingsWindow(
             string iconPath,
             string gamepadPath,
             Action openGeneral,
             Action openTheme,
-            Action openGames)
+            Action openGames,
+            Action openSocial)
         {
             _iconPath = iconPath;
             _gamepadPath = gamepadPath;
             _openGeneral = openGeneral;
             _openTheme = openTheme;
             _openGames = openGames;
+            _openSocial = openSocial;
 
             Title = "\u8BBE\u7F6E";
             Width = 390;
-            Height = 336;
+            Height = 416;
             WindowStartupLocation = WindowStartupLocation.Manual;
             WindowStyle = WindowStyle.None;
             ResizeMode = ResizeMode.NoResize;
@@ -2579,12 +2611,22 @@ namespace WinBridgeRecovery
             Button games = MenuRow(
                 BuildGameIcon(),
                 "\u5C0F\u6E38\u620F",
-                "\u8D2A\u5403\u86C7\u4E0E\u6253\u7816\u5757");
+                "\u8D2A\u5403\u86C7\u4E0E\u626B\u96F7");
             System.Windows.Automation.AutomationProperties.SetName(
                 games, "\u5C0F\u6E38\u620F");
             games.Margin = new Thickness(0, 8, 0, 0);
             games.Click += delegate { _openGames(); };
             menu.Children.Add(games);
+
+            Button social = MenuRow(
+                BuildSocialIcon(),
+                "\u770B\u770B\u4ED6 \u2197",
+                "Tibo\u3001OpenAI \u4E0E ChatGPT \u6700\u65B0\u52A8\u6001");
+            System.Windows.Automation.AutomationProperties.SetName(
+                social, "\u770B\u770B\u4ED6");
+            social.Margin = new Thickness(0, 8, 0, 0);
+            social.Click += delegate { _openSocial(); };
+            menu.Children.Add(social);
 
             Grid.SetRow(menu, 1);
             root.Children.Add(menu);
@@ -2741,6 +2783,22 @@ namespace WinBridgeRecovery
                     ShadowDepth = 1,
                     Opacity = 0.35
                 }
+            });
+            return icon;
+        }
+
+        private FrameworkElement BuildSocialIcon()
+        {
+            Grid icon = new Grid { Width = 32, Height = 32 };
+            icon.Children.Add(new TextBlock
+            {
+                Text = "\uD835\uDD4F",
+                FontFamily = new FontFamily("Segoe UI Symbol, Segoe UI"),
+                FontSize = 22,
+                FontWeight = FontWeights.SemiBold,
+                Foreground = FrozenBrush("#FFF7FAFC"),
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center
             });
             return icon;
         }
