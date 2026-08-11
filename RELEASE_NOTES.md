@@ -33,8 +33,10 @@ Independent Windows recovery launcher for GPT/Codex Desktop Browser, Chrome, and
 - Social activity window loaded four live/cached public posts and completed Chinese translation: PASS during development.
 - Browser, Chrome, and Computer Use independent interaction checks: previously PASS on the development machine; this historical result is not a substitute for a fresh target-machine check.
 - In-app update source compiles and requires SHA-256 before installation: PASS.
-- Real v3.1 update download/install: pending until the v3.1 release assets are published.
-- Isolated installer and uninstaller checks: to be repeated against the final v3.1 package before publishing.
+- Real v3.1 update metadata and asset download: pending until the v3.1 release assets are published; the update path rejects installers without a matching SHA-256.
+- Final v3.1 installer and uninstaller isolated checks: PASS. The installed payload reported v3.1.0 and MIT License, uninstall removed only the owned product, preserved the selected backup folder, and left an unrelated marker untouched.
+- Final portable ZIP clean-extraction self-test: PASS. The original repair-core script hash remained unchanged.
+- Public source and package privacy scan: PASS with zero detected machine-local paths, email addresses, access tokens, or private-key markers.
 
 ## Safety notes
 
@@ -44,4 +46,9 @@ Independent Windows recovery launcher for GPT/Codex Desktop Browser, Chrome, and
 
 ## Download verification
 
-Final SHA-256 values are added after the v3.1 installer and portable ZIP are built.
+```text
+SHA256  B9B0FE1520DD9D121A7DD291D6DF4148A780F48E452A2A3CA7656F867E141D36  WinBridge-Recovery-Setup.exe
+SHA256  C452DA289033DFEB31EF43DFDFE8B6328429D5771BD2AD79D70748C2FB484A83  WinBridge-Recovery-v3.1.0-beta.1-portable.zip
+```
+
+The portable ZIP contains 27 runtime/documentation/certificate files. It passed the packaged self-test after clean extraction and contains no machine-local configuration, logs, backups, resource mirrors, credentials, private signing material, or official Desktop/plugin payloads.
