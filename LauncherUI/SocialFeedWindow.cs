@@ -45,7 +45,7 @@ namespace WinBridgeRecovery
                     if (key == "include_tibo" && bool.TryParse(value, out flag)) settings.IncludeTibo = flag;
                     else if (key == "include_openai" && bool.TryParse(value, out flag)) settings.IncludeOpenAI = flag;
                     else if (key == "include_chatgpt" && bool.TryParse(value, out flag)) settings.IncludeChatGPT = flag;
-                    else if (key == "maximum_posts" && int.TryParse(value, out number)) settings.MaximumPosts = Math.Max(3, Math.Min(4, number));
+                    else if (key == "maximum_posts" && int.TryParse(value, out number)) settings.MaximumPosts = Math.Max(1, Math.Min(10, number));
                     else if (key == "hours" && int.TryParse(value, out number)) settings.Hours = Math.Max(24, Math.Min(72, number));
                     else if (key == "use_jina_fallback" && bool.TryParse(value, out flag)) settings.UseJinaFallback = flag;
                 }

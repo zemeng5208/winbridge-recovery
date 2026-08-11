@@ -191,6 +191,11 @@ namespace WinBridgeRecovery
                 _general.LogSessionLimit.ToString(CultureInfo.InvariantCulture) + " \u4F1A\u8BDD \u00B7 " +
                 (_general.MaxLogBytes / 1024 / 1024).ToString(CultureInfo.InvariantCulture) + " MB", false);
             storage.Body.Children.Add(ChoiceRow(
+                "\u6B63\u5F0F\u5907\u4EFD\u4FDD\u7559\u6570",
+                new[] { "1", "2", "3" },
+                _general.BackupRetentionLimit.ToString(CultureInfo.InvariantCulture),
+                delegate(string value) { int number; if (int.TryParse(value, out number)) { _general.BackupRetentionLimit = number; SaveGeneral(); } }));
+            storage.Body.Children.Add(ChoiceRow(
                 "\u4FDD\u7559\u65E5\u5FD7\u4F1A\u8BDD",
                 new[] { "10", "20", "30" },
                 _general.LogSessionLimit.ToString(CultureInfo.InvariantCulture),
@@ -214,7 +219,7 @@ namespace WinBridgeRecovery
                 delegate(bool value) { _feed.IncludeOpenAI = value; SaveFeed(); }));
             feed.Body.Children.Add(ToggleRow("ChatGPT", "@ChatGPT", _feed.IncludeChatGPT,
                 delegate(bool value) { _feed.IncludeChatGPT = value; SaveFeed(); }));
-            feed.Body.Children.Add(ChoiceRow("\u663E\u793A\u52A8\u6001", new[] { "3", "4" },
+            feed.Body.Children.Add(ChoiceRow("\u663E\u793A\u52A8\u6001", new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" },
                 _feed.MaximumPosts.ToString(CultureInfo.InvariantCulture),
                 delegate(string value) { int number; if (int.TryParse(value, out number)) { _feed.MaximumPosts = number; SaveFeed(); } }));
             feed.Body.Children.Add(ToggleRow(
@@ -326,35 +331,99 @@ namespace WinBridgeRecovery
             Grid row = BaseRow();
             StackPanel copy = RowCopy(title, description);
             row.Children.Add(copy);
+            StackPanel switchGroup = new StackPanel
+            {
+                Orientation = Orientation.Horizontal,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            TextBlock state = new TextBlock
+            {
+                Text = initial ? "\u5F00" : "\u5173",
+                Foreground = initial ? Brush("#FF55E7B0") : Brush("#FF8B949D"),
+                FontSize = 10,
+                FontWeight = FontWeights.SemiBold,
+                Width = 20,
+                VerticalAlignment = VerticalAlignment.Center
+            };
             ToggleButton toggle = new ToggleButton
             {
-                Width = 38,
-                Height = 22,
+                Width = 46,
+                Height = 24,
                 IsChecked = initial,
-                Background = initial ? Brush("#FFCAD2DA") : Brush("#FF22272D"),
-                BorderBrush = Brush("#FF3A4149"),
-                Foreground = initial ? Brush("#FF101419") : Brush("#FFAAB3BB"),
-                Content = initial ? "\u25CF" : "\u25CB",
-                FontSize = 15,
-                Cursor = Cursors.Hand
+                Background = Brushes.Transparent,
+                BorderBrush = Brushes.Transparent,
+                Cursor = Cursors.Hand,
+                FocusVisualStyle = null,
+                Template = CreateSwitchTemplate(),
+                ToolTip = initial ? "\u5DF2\u5F00\u542F" : "\u5DF2\u5173\u95ED"
             };
             toggle.Checked += delegate
             {
-                toggle.Background = Brush("#FFCAD2DA");
-                toggle.Foreground = Brush("#FF101419");
-                toggle.Content = "\u25CF";
+                state.Text = "\u5F00";
+                state.Foreground = Brush("#FF55E7B0");
+                toggle.ToolTip = "\u5DF2\u5F00\u542F";
                 changed(true);
             };
             toggle.Unchecked += delegate
             {
-                toggle.Background = Brush("#FF22272D");
-                toggle.Foreground = Brush("#FFAAB3BB");
-                toggle.Content = "\u25CB";
+                state.Text = "\u5173";
+                state.Foreground = Brush("#FF8B949D");
+                toggle.ToolTip = "\u5DF2\u5173\u95ED";
                 changed(false);
             };
-            Grid.SetColumn(toggle, 1);
-            row.Children.Add(toggle);
+            switchGroup.Children.Add(state);
+            switchGroup.Children.Add(toggle);
+            Grid.SetColumn(switchGroup, 1);
+            row.Children.Add(switchGroup);
             return row;
+        }
+
+        private static ControlTemplate CreateSwitchTemplate()
+        {
+            ControlTemplate template = new ControlTemplate(typeof(ToggleButton));
+            FrameworkElementFactory grid = new FrameworkElementFactory(typeof(Grid));
+            FrameworkElementFactory track = new FrameworkElementFactory(typeof(Border));
+            track.Name = "Track";
+            track.SetValue(Border.BackgroundProperty, Brush("#FF242A30"));
+            track.SetValue(Border.BorderBrushProperty, Brush("#FF4A535C"));
+            track.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+            track.SetValue(Border.CornerRadiusProperty, new CornerRadius(12));
+            grid.AppendChild(track);
+            FrameworkElementFactory thumb = new FrameworkElementFactory(typeof(Border));
+            thumb.Name = "Thumb";
+            thumb.SetValue(FrameworkElement.WidthProperty, 18.0);
+            thumb.SetValue(FrameworkElement.HeightProperty, 18.0);
+            thumb.SetValue(FrameworkElement.MarginProperty, new Thickness(3));
+            thumb.SetValue(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Left);
+            thumb.SetValue(FrameworkElement.VerticalAlignmentProperty, VerticalAlignment.Center);
+            thumb.SetValue(Border.BackgroundProperty, Brush("#FFF3F6F8"));
+            thumb.SetValue(Border.CornerRadiusProperty, new CornerRadius(9));
+            thumb.SetValue(UIElement.EffectProperty, new DropShadowEffect
+            {
+                Color = Colors.Black,
+                BlurRadius = 4,
+                ShadowDepth = 1,
+                Opacity = 0.35
+            });
+            grid.AppendChild(thumb);
+            template.VisualTree = grid;
+            Trigger checkedTrigger = new Trigger
+            {
+                Property = ToggleButton.IsCheckedProperty,
+                Value = true
+            };
+            checkedTrigger.Setters.Add(new Setter(Border.BackgroundProperty, Brush("#FF23B989"), "Track"));
+            checkedTrigger.Setters.Add(new Setter(Border.BorderBrushProperty, Brush("#FF58E7B4"), "Track"));
+            checkedTrigger.Setters.Add(new Setter(FrameworkElement.HorizontalAlignmentProperty, HorizontalAlignment.Right, "Thumb"));
+            template.Triggers.Add(checkedTrigger);
+            Trigger hoverTrigger = new Trigger
+            {
+                Property = UIElement.IsMouseOverProperty,
+                Value = true
+            };
+            hoverTrigger.Setters.Add(new Setter(Border.BorderBrushProperty, Brush("#FF89959F"), "Track"));
+            template.Triggers.Add(hoverTrigger);
+            return template;
         }
 
         private UIElement ReadOnlyRow(string title, string value, string description)
@@ -604,4 +673,3 @@ namespace WinBridgeRecovery
         }
     }
 }
-

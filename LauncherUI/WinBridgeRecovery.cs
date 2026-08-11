@@ -1858,6 +1858,45 @@ namespace WinBridgeRecovery
             }
         }
 
+        private void ApplyConfiguredBackupRetention()
+        {
+            if (_demoMode || _diagnoseMode) return;
+            int limit = Math.Max(1, Math.Min(3, _generalSettings.BackupRetentionLimit));
+            try
+            {
+                string launcherDrive = System.IO.Path.GetPathRoot(_root);
+                string backupRoot = System.IO.Path.Combine(launcherDrive, "CodexPluginRepairBackups");
+                string storagePath = System.IO.Path.Combine(_root, "Config", "storage.ini");
+                if (File.Exists(storagePath))
+                {
+                    foreach (string line in File.ReadAllLines(storagePath, Encoding.UTF8))
+                    {
+                        if (!line.StartsWith("backup_root=", StringComparison.OrdinalIgnoreCase)) continue;
+                        string configured = line.Substring("backup_root=".Length).Trim();
+                        if (System.IO.Path.IsPathRooted(configured))
+                            backupRoot = System.IO.Path.GetFullPath(configured).TrimEnd('\\');
+                        break;
+                    }
+                }
+                if (!Directory.Exists(backupRoot)) return;
+                DirectoryInfo[] backups = new DirectoryInfo(backupRoot)
+                    .GetDirectories("G-*", SearchOption.TopDirectoryOnly);
+                Array.Sort(backups, delegate(DirectoryInfo left, DirectoryInfo right)
+                {
+                    int byTime = right.LastWriteTimeUtc.CompareTo(left.LastWriteTimeUtc);
+                    return byTime != 0 ? byTime : StringComparer.OrdinalIgnoreCase.Compare(right.Name, left.Name);
+                });
+                for (int i = limit; i < backups.Length; i++)
+                    backups[i].Delete(true);
+                AppendLog("[OK] Backup retention: " + Math.Min(limit, backups.Length) +
+                    " of " + limit + " configured backup slots are in use.");
+            }
+            catch (Exception ex)
+            {
+                AppendLog("[WARN] Configured backup retention was skipped: " + ex.Message);
+            }
+        }
+
         private void AppendLog(string line)
         {
             int limit = Math.Max(120, _generalSettings.UiLogLineLimit);
@@ -1989,6 +2028,7 @@ namespace WinBridgeRecovery
                 _snakeGame.NotifyLaunchComplete();
 
             RunLogMaintenance(false);
+            ApplyConfiguredBackupRetention();
             if (closeAutomatically && _generalSettings.AutoCloseAfterSuccess)
             {
                 _closeTimer = new DispatcherTimer
@@ -2938,6 +2978,7 @@ namespace WinBridgeRecovery
     {
         public bool AutoCloseAfterSuccess = true;
         public bool KeepOpenWhileGaming = true;
+        public int BackupRetentionLimit = 3;
         public int LogSessionLimit = 20;
         public long MaxLogBytes = 10L * 1024L * 1024L;
         public int UiLogLineLimit = 260;
@@ -2948,6 +2989,7 @@ namespace WinBridgeRecovery
             {
                 AutoCloseAfterSuccess = AutoCloseAfterSuccess,
                 KeepOpenWhileGaming = KeepOpenWhileGaming,
+                BackupRetentionLimit = BackupRetentionLimit,
                 LogSessionLimit = LogSessionLimit,
                 MaxLogBytes = MaxLogBytes,
                 UiLogLineLimit = UiLogLineLimit
@@ -2979,6 +3021,10 @@ namespace WinBridgeRecovery
                         StringComparison.OrdinalIgnoreCase) &&
                         bool.TryParse(value, out flag))
                         settings.KeepOpenWhileGaming = flag;
+                    else if (string.Equals(key, "backupRetentionLimit",
+                        StringComparison.OrdinalIgnoreCase) &&
+                        int.TryParse(value, out number))
+                        settings.BackupRetentionLimit = Math.Max(1, Math.Min(3, number));
                     else if (string.Equals(key, "logSessionLimit",
                         StringComparison.OrdinalIgnoreCase) &&
                         int.TryParse(value, out number))
@@ -3009,6 +3055,7 @@ namespace WinBridgeRecovery
             {
                 "autoCloseAfterSuccess=" + AutoCloseAfterSuccess,
                 "keepOpenWhileGaming=" + KeepOpenWhileGaming,
+                "backupRetentionLimit=" + BackupRetentionLimit,
                 "logSessionLimit=" + LogSessionLimit,
                 "maxLogBytes=" + MaxLogBytes,
                 "uiLogLineLimit=" + UiLogLineLimit
