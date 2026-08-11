@@ -5,6 +5,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Effects;
@@ -463,32 +464,107 @@ namespace WinBridgeRecovery
             row.Children.Add(RowCopy(
                 L("language.title"),
                 L("language.description")));
-            ComboBox combo = new ComboBox
+            string[] codes = { "zh", "en", "fr", "es", "ru", "ar" };
+            string[] languageKeys = { "language.zh", "language.en", "language.fr", "language.es", "language.ru", "language.ar" };
+            string[] names = new string[languageKeys.Length];
+            for (int i = 0; i < languageKeys.Length; i++) names[i] = L(languageKeys[i]);
+            int selected = Array.IndexOf(codes, _language.Code);
+            if (selected < 0) selected = 1;
+
+            Button selector = new Button
             {
                 Width = 112,
                 Height = 28,
                 Background = Brush("#FF1D2228"),
                 Foreground = Brush("#FFF0F3F5"),
                 BorderBrush = Brush("#FF48515A"),
-                FontSize = 10
+                BorderThickness = new Thickness(1),
+                FontSize = 10,
+                Cursor = Cursors.Hand,
+                FocusVisualStyle = null,
+                Content = names[selected] + "  \u2304",
+                Template = CreateSelectorTemplate()
             };
-            string[] codes = { "zh", "en", "fr", "es", "ru", "ar" };
-            string[] languageKeys = { "language.zh", "language.en", "language.fr", "language.es", "language.ru", "language.ar" };
-            for (int i = 0; i < languageKeys.Length; i++) combo.Items.Add(L(languageKeys[i]));
-            int selected = Array.IndexOf(codes, _language.Code);
-            combo.SelectedIndex = selected < 0 ? 1 : selected;
-            combo.SelectionChanged += delegate
+
+            ContextMenu menu = new ContextMenu
             {
-                if (combo.SelectedIndex < 0) return;
-                string nextCode = codes[combo.SelectedIndex];
-                if (String.Equals(_language.Code, nextCode, StringComparison.OrdinalIgnoreCase)) return;
-                _language.Code = nextCode;
-                _language.Save(_root);
-                MessageBox.Show(this, L("language.restart.message"), L("language.restart.title"), MessageBoxButton.OK, MessageBoxImage.Information);
+                Background = Brush("#FF11161B"),
+                Foreground = Brush("#FFF0F3F5"),
+                BorderBrush = Brush("#FF48515A"),
+                BorderThickness = new Thickness(1),
+                Placement = PlacementMode.Bottom
             };
-            Grid.SetColumn(combo, 1);
-            row.Children.Add(combo);
+            for (int i = 0; i < codes.Length; i++)
+            {
+                string nextCode = codes[i];
+                string nextName = names[i];
+                MenuItem item = new MenuItem
+                {
+                    Header = nextName,
+                    Foreground = Brush("#FFE7ECEF"),
+                    Background = Brushes.Transparent,
+                    Padding = new Thickness(12, 7, 12, 7),
+                    Template = CreateMenuItemTemplate()
+                };
+                item.Click += delegate
+                {
+                    if (String.Equals(_language.Code, nextCode, StringComparison.OrdinalIgnoreCase)) return;
+                    _language.Code = nextCode;
+                    _language.Save(_root);
+                    selector.Content = nextName + "  \u2304";
+                    MessageBox.Show(this, L("language.restart.message"), L("language.restart.title"), MessageBoxButton.OK, MessageBoxImage.Information);
+                };
+                menu.Items.Add(item);
+            }
+            selector.ContextMenu = menu;
+            selector.Click += delegate
+            {
+                selector.ContextMenu.PlacementTarget = selector;
+                selector.ContextMenu.IsOpen = true;
+            };
+            Grid.SetColumn(selector, 1);
+            row.Children.Add(selector);
             return row;
+        }
+
+        private static ControlTemplate CreateSelectorTemplate()
+        {
+            ControlTemplate template = new ControlTemplate(typeof(Button));
+            FrameworkElementFactory frame = new FrameworkElementFactory(typeof(Border));
+            frame.Name = "Frame";
+            frame.SetBinding(Border.BackgroundProperty, new Binding("Background") { RelativeSource = new RelativeSource(RelativeSourceMode.TemplatedParent) });
+            frame.SetBinding(Border.BorderBrushProperty, new Binding("BorderBrush") { RelativeSource = new RelativeSource(RelativeSourceMode.TemplatedParent) });
+            frame.SetBinding(Border.BorderThicknessProperty, new Binding("BorderThickness") { RelativeSource = new RelativeSource(RelativeSourceMode.TemplatedParent) });
+            frame.SetValue(Border.CornerRadiusProperty, new CornerRadius(7));
+            FrameworkElementFactory content = new FrameworkElementFactory(typeof(ContentPresenter));
+            content.SetValue(ContentPresenter.HorizontalAlignmentProperty, HorizontalAlignment.Center);
+            content.SetValue(ContentPresenter.VerticalAlignmentProperty, VerticalAlignment.Center);
+            content.SetValue(ContentPresenter.ContentProperty, new TemplateBindingExtension(ContentControl.ContentProperty));
+            frame.AppendChild(content);
+            template.VisualTree = frame;
+            Trigger hover = new Trigger { Property = UIElement.IsMouseOverProperty, Value = true };
+            hover.Setters.Add(new Setter(Border.BackgroundProperty, Brush("#FF252C33"), "Frame"));
+            hover.Setters.Add(new Setter(Border.BorderBrushProperty, Brush("#FF697580"), "Frame"));
+            template.Triggers.Add(hover);
+            return template;
+        }
+
+        private static ControlTemplate CreateMenuItemTemplate()
+        {
+            ControlTemplate template = new ControlTemplate(typeof(MenuItem));
+            FrameworkElementFactory frame = new FrameworkElementFactory(typeof(Border));
+            frame.Name = "MenuFrame";
+            frame.SetBinding(Border.BackgroundProperty, new Binding("Background") { RelativeSource = new RelativeSource(RelativeSourceMode.TemplatedParent) });
+            frame.SetValue(Border.CornerRadiusProperty, new CornerRadius(5));
+            FrameworkElementFactory content = new FrameworkElementFactory(typeof(ContentPresenter));
+            content.SetValue(ContentPresenter.ContentSourceProperty, "Header");
+            content.SetValue(ContentPresenter.MarginProperty, new Thickness(2));
+            frame.AppendChild(content);
+            template.VisualTree = frame;
+            Trigger highlighted = new Trigger { Property = MenuItem.IsHighlightedProperty, Value = true };
+            highlighted.Setters.Add(new Setter(Border.BackgroundProperty, Brush("#FF26313A"), "MenuFrame"));
+            template.Triggers.Add(highlighted);
+            return template;
         }
 
         private string L(string key, params object[] args)
