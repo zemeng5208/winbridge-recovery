@@ -47,8 +47,8 @@ Independent Windows recovery launcher for GPT/Codex Desktop Browser, Chrome, and
 ## Download verification
 
 ```text
-SHA256  B9B0FE1520DD9D121A7DD291D6DF4148A780F48E452A2A3CA7656F867E141D36  WinBridge-Recovery-Setup.exe
-SHA256  C452DA289033DFEB31EF43DFDFE8B6328429D5771BD2AD79D70748C2FB484A83  WinBridge-Recovery-v3.1.0-beta.1-portable.zip
+SHA256  6775CE0559985A221C183145A405964F05A9CC228D276FCAB95DB9466177D978  WinBridge-Recovery-Setup.exe
+SHA256  91919C978BBBD3A2082107F522CE948915422EF778FC173FDEFD80F703DFC45E  WinBridge-Recovery-v3.1.0-beta.1-portable.zip
 ```
 
 The portable ZIP contains 27 runtime/documentation/certificate files. It passed the packaged self-test after clean extraction and contains no machine-local configuration, logs, backups, resource mirrors, credentials, private signing material, or official Desktop/plugin payloads.
