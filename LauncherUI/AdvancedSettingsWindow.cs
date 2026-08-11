@@ -247,7 +247,7 @@ namespace WinBridgeRecovery
 
             DisclosureSection about = Section("\u24D8", "\u66F4\u65B0\u4E0E\u5173\u4E8E", "v3.1 \u00B7 Windows 11", false);
             about.Body.Children.Add(ReadOnlyRow("\u5F53\u524D\u7248\u672C", "3.1", "\u81EA\u9002\u5E94\u63D2\u4EF6\u4FEE\u590D\u3001\u52A8\u6001\u805A\u5408\u4E0E\u672C\u5730\u5C0F\u6E38\u620F"));
-            about.Body.Children.Add(CommandRow("\u6253\u5F00\u9879\u76EE\u53D1\u5E03\u9875", delegate { OpenPath("https://github.com/zemeng5208/winbridge-recovery/releases"); }));
+            about.Body.Children.Add(CommandRow("\u68C0\u67E5\u5E76\u5B89\u88C5\u66F4\u65B0", OpenUpdateCenter));
             about.Body.Children.Add(new TextBlock
             {
                 Text = "\u8BBE\u7F6E\u4E2D\u5FC3\u91C7\u7528\u539F\u521B WPF \u5B9E\u73B0\u3002\u89C6\u89C9\u4E0A\u53C2\u8003\u73B0\u4EE3\u5F00\u6E90\u76D1\u63A7\u5DE5\u5177\u7684\u7D27\u51D1\u6298\u53E0\u4FE1\u606F\u67B6\u6784\uFF0C\u672A\u590D\u5236\u5176\u6E90\u7801\u6216\u8D44\u4EA7\u3002",
@@ -677,6 +677,13 @@ namespace WinBridgeRecovery
         private void SaveFeed()
         {
             try { _feed.Save(_feedPath); } catch { }
+        }
+
+        private void OpenUpdateCenter()
+        {
+            UpdateWindow window = new UpdateWindow(_root, _iconPath);
+            window.Owner = this;
+            window.Show();
         }
 
         private static void OpenPath(string path)

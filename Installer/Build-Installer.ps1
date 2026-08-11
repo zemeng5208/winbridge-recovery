@@ -106,7 +106,7 @@ try {
 
   $uiTarget = Join-Path $payloadRoot 'LauncherUI'
   New-Item -ItemType Directory -Path $uiTarget -Force | Out-Null
-  foreach ($name in @('WinBridgeRecovery.exe','WinBridgeGuardian.exe','README.md')) {
+  foreach ($name in @('WinBridgeRecovery.exe','WinBridgeGuardian.exe','WinBridgeUpdateBootstrapper.exe','README.md')) {
     Copy-Item -LiteralPath (Join-Path $projectRoot ('LauncherUI\' + $name)) `
       -Destination (Join-Path $uiTarget $name) -Force
   }
@@ -146,8 +146,14 @@ try {
   Set-ProjectSignature $OutputPath $signingCertificate
 
   $hash = (Get-FileHash -LiteralPath $OutputPath -Algorithm SHA256).Hash
+  $hashSidecar = $OutputPath + '.sha256'
+  [System.IO.File]::WriteAllText(
+    $hashSidecar,
+    ($hash + '  ' + [System.IO.Path]::GetFileName($OutputPath) + [Environment]::NewLine),
+    (New-Object System.Text.UTF8Encoding($false)))
   Write-Host "Installer: $OutputPath"
   Write-Host "SHA256: $hash"
+  Write-Host "SHA256 file: $hashSidecar"
   Write-Host "Size: $((Get-Item -LiteralPath $OutputPath).Length) bytes"
 } finally {
   if (Test-Path -LiteralPath $stageRoot) {

@@ -10,6 +10,9 @@ $minesweeperSource = Join-Path $root 'MinesweeperGameWindow.cs'
 $socialFeedSource = Join-Path $root 'SocialFeedWindow.cs'
 $advancedSettingsSource = Join-Path $root 'AdvancedSettingsWindow.cs'
 $localizationSource = Join-Path $root 'LauncherLocalization.cs'
+$updateSource = Join-Path $root 'UpdateWindow.cs'
+$updateBootstrapperSource = Join-Path $root 'WinBridgeUpdateBootstrapper.cs'
+$updateBootstrapperOutput = Join-Path $root 'WinBridgeUpdateBootstrapper.exe'
 $output = Join-Path $root 'WinBridgeRecovery.exe'
 $guardianSource = Join-Path $root 'WinBridgeGuardian.cs'
 $guardianOutput = Join-Path $root 'WinBridgeGuardian.exe'
@@ -33,6 +36,9 @@ try {
   }
   if (-not (Test-Path -LiteralPath $localizationSource -PathType Leaf)) {
     throw "Source file not found: $localizationSource"
+  }
+  foreach ($required in @($updateSource,$updateBootstrapperSource)) {
+    if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Source file not found: $required" }
   }
   if (-not (Test-Path -LiteralPath $icon -PathType Leaf)) {
     throw "Icon file not found: $icon"
@@ -73,7 +79,7 @@ try {
   try {
     $result = $provider.CompileAssemblyFromFile(
       $compilerParameters,
-      [string[]]@($source, $minesweeperSource, $socialFeedSource, $advancedSettingsSource, $localizationSource))
+      [string[]]@($source, $minesweeperSource, $socialFeedSource, $advancedSettingsSource, $localizationSource, $updateSource))
   } finally {
     $provider.Dispose()
   }
@@ -82,6 +88,21 @@ try {
       '{0}({1},{2}): {3} {4}' -f $_.FileName, $_.Line, $_.Column, $_.ErrorNumber, $_.ErrorText
     })
     throw ($messages -join [Environment]::NewLine)
+  }
+
+  $updateParameters = New-Object System.CodeDom.Compiler.CompilerParameters
+  $updateParameters.GenerateExecutable = $true
+  $updateParameters.OutputAssembly = $updateBootstrapperOutput
+  $updateParameters.CompilerOptions = '/target:winexe /win32icon:"' + $icon + '"'
+  [void]$updateParameters.ReferencedAssemblies.Add([System.Uri].Assembly.Location)
+  $updateProvider = New-Object Microsoft.CSharp.CSharpCodeProvider
+  try {
+    $updateResult = $updateProvider.CompileAssemblyFromFile($updateParameters, $updateBootstrapperSource)
+  } finally {
+    $updateProvider.Dispose()
+  }
+  if ($updateResult.Errors.HasErrors) {
+    throw (($updateResult.Errors | ForEach-Object { '{0}({1},{2}): {3} {4}' -f $_.FileName,$_.Line,$_.Column,$_.ErrorNumber,$_.ErrorText }) -join [Environment]::NewLine)
   }
 
   if (-not (Test-Path -LiteralPath $temporary -PathType Leaf)) {
