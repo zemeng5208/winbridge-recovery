@@ -12,8 +12,8 @@ using Microsoft.Win32;
 [assembly: AssemblyDescription("Testing stage. Authorized recipients may test and perform secondary development. https://github.com/zemeng5208")]
 [assembly: AssemblyCompany("https://github.com/zemeng5208")]
 [assembly: AssemblyProduct("WinBridge Recovery")]
-[assembly: AssemblyVersion("3.0.0.0")]
-[assembly: AssemblyFileVersion("3.0.0.0")]
+[assembly: AssemblyVersion("3.1.0.0")]
+[assembly: AssemblyFileVersion("3.1.0.0")]
 
 namespace WinBridgeUninstall
 {

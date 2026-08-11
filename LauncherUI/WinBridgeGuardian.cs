@@ -11,8 +11,8 @@ using System.Threading;
 [assembly: System.Reflection.AssemblyDescription("Testing stage. Authorized recipients may test and perform secondary development. https://github.com/zemeng5208")]
 [assembly: System.Reflection.AssemblyCompany("https://github.com/zemeng5208")]
 [assembly: System.Reflection.AssemblyProduct("WinBridge Recovery")]
-[assembly: System.Reflection.AssemblyVersion("3.0.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("3.0.0.0")]
+[assembly: System.Reflection.AssemblyVersion("3.1.0.0")]
+[assembly: System.Reflection.AssemblyFileVersion("3.1.0.0")]
 
 namespace WinBridgeRecovery
 {

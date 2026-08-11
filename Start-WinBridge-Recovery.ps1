@@ -8,7 +8,7 @@ param(
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = 'Stop'
 
-$script:ToolVersion = '3.0.0'
+$script:ToolVersion = '3.1.0'
 $script:ToolRoot = $PSScriptRoot
 $script:LogsRoot = Join-Path $script:ToolRoot 'Logs'
 $script:BackupsRoot = 'D:\CodexPluginRepairBackups'
