@@ -52,7 +52,7 @@ namespace WinBridgeRecovery
             _feedAvailable = SocialFeedWindow.ProbeAvailability();
             if (!_feedAvailable && !File.Exists(_feedPath)) _feed.Enabled = false;
 
-            Title = L("\u8BBE\u7F6E", "Settings", "Param\u00E8tres", "Configuraci\u00F3n", "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438", "\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A");
+            Title = L("window.settings");
             Width = 430;
             Height = 760;
             MinWidth = 400;
@@ -140,7 +140,7 @@ namespace WinBridgeRecovery
                 if (e.ButtonState == MouseButtonState.Pressed) DragMove();
             };
             grid.Children.Add(brand);
-            Button close = IconButton("\u00D7", "\u5173\u95ED");
+            Button close = IconButton("\u00D7", L("button.close"));
             close.Click += delegate { Close(); };
             Grid.SetColumn(close, 1);
             grid.Children.Add(close);
@@ -150,107 +150,109 @@ namespace WinBridgeRecovery
 
         private void BuildSections()
         {
-            DisclosureSection general = Section("\u2637", "\u5E38\u89C4",
-                (_general.AutoCloseAfterSuccess ? "\u81EA\u52A8\u5173\u95ED \u5F00" : "\u81EA\u52A8\u5173\u95ED \u5173") + " \u00B7 \u7B80\u4F53\u4E2D\u6587", true);
+            string languageName = L("language." + _language.Code);
+            DisclosureSection general = Section("\u2637", L("section.general"),
+                L(_general.AutoCloseAfterSuccess ? "summary.general.on" : "summary.general.off", languageName), true);
             general.Body.Children.Add(LanguageRow());
             general.Body.Children.Add(ToggleRow(
-                "\u5B8C\u6210\u540E\u81EA\u52A8\u5173\u95ED",
-                "\u65E0\u5176\u4ED6\u4EA4\u4E92\u4EFB\u52A1\u65F6\u91CA\u653E\u542F\u52A8\u5668\u8D44\u6E90",
+                L("row.autoClose"),
+                L("desc.autoClose"),
                 _general.AutoCloseAfterSuccess,
                 delegate(bool value) { _general.AutoCloseAfterSuccess = value; SaveGeneral(); }));
             _sections.Children.Add(general.Root);
 
-            DisclosureSection window = Section("\u25A3", "\u7A97\u53E3", "\u666E\u901A\u7A97\u53E3 \u00B7 \u81EA\u52A8\u6E05\u7406", false);
+            DisclosureSection window = Section("\u25A3", L("section.window"), L("summary.window"), false);
             window.Body.Children.Add(ToggleRow(
-                "\u6E38\u620F\u8FD0\u884C\u65F6\u4FDD\u6301\u542F\u52A8\u5668",
-                "\u5173\u95ED\u6700\u540E\u4E00\u4E2A\u6E38\u620F\u7A97\u53E3\u540E\u518D\u81EA\u52A8\u9000\u51FA",
+                L("row.keepOpenGames"),
+                L("desc.keepOpenGames"),
                 _general.KeepOpenWhileGaming,
                 delegate(bool value) { _general.KeepOpenWhileGaming = value; SaveGeneral(); }));
             window.Body.Children.Add(ReadOnlyRow(
-                "\u9000\u51FA\u6E05\u7406",
-                "\u5DF2\u542F\u7528",
-                "\u5173\u95ED\u542F\u52A8\u5668\u65F6\u53EA\u6E05\u7406\u81EA\u8EAB\u8F85\u52A9\u8FDB\u7A0B\uFF0C\u4E0D\u7ED3\u675F ChatGPT"));
+                L("row.exitCleanup"),
+                L("status.enabled"),
+                L("desc.exitCleanup")));
             _sections.Children.Add(window.Root);
 
-            DisclosureSection appearance = Section("\u25C9", "\u5916\u89C2",
-                string.Equals(_theme.Theme, "glass", StringComparison.OrdinalIgnoreCase) ? "Apple \u6BDB\u73BB\u7483" : "\u7ECF\u5178\u9ED1", false);
+            DisclosureSection appearance = Section("\u25C9", L("section.appearance"),
+                L(string.Equals(_theme.Theme, "glass", StringComparison.OrdinalIgnoreCase) ? "theme.glass" : "theme.classic"), false);
             appearance.Body.Children.Add(SegmentedThemeRow());
             appearance.Body.Children.Add(SliderRow(
-                "\u73BB\u7483\u9762\u677F",
-                "\u5185\u5BB9\u5C42\u7684\u900F\u660E\u4E0E\u80CC\u666F\u6DF1\u5EA6",
+                L("row.panelOpacity"),
+                L("desc.panelOpacity"),
                 _theme.PanelOpacity,
                 delegate(double value) { _theme.PanelOpacity = value; SaveTheme(); }));
             appearance.Body.Children.Add(SliderRow(
-                "\u8272\u8C03\u5F3A\u5EA6",
-                "\u8C03\u6574\u51B7\u8272\u8FB9\u7F18\u9AD8\u5149\u4E0E\u73BB\u7483\u67D3\u8272",
+                L("row.tintStrength"),
+                L("desc.tintStrength"),
                 _theme.TintStrength,
                 delegate(double value) { _theme.TintStrength = value; SaveTheme(); }));
             appearance.Body.Children.Add(ToggleRow(
-                "\u51CF\u5C11\u52A8\u6001\u6548\u679C",
-                "\u51CF\u5C11\u7C92\u5B50\u4E0E\u754C\u9762\u8FC7\u6E21",
+                L("row.reduceMotion"),
+                L("desc.reduceMotion"),
                 _theme.ReduceMotion,
                 delegate(bool value) { _theme.ReduceMotion = value; SaveTheme(); }));
             _sections.Children.Add(appearance.Root);
 
-            DisclosureSection storage = Section("\u25A4", "\u65E5\u5FD7\u4E0E\u5B58\u50A8",
-                _general.LogSessionLimit.ToString(CultureInfo.InvariantCulture) + " \u4F1A\u8BDD \u00B7 " +
-                (_general.MaxLogBytes / 1024 / 1024).ToString(CultureInfo.InvariantCulture) + " MB", false);
+            DisclosureSection storage = Section("\u25A4", L("section.storage"),
+                L("summary.storage",
+                    _general.LogSessionLimit.ToString(CultureInfo.InvariantCulture),
+                    (_general.MaxLogBytes / 1024 / 1024).ToString(CultureInfo.InvariantCulture),
+                    L("unit.mb")), false);
             storage.Body.Children.Add(ChoiceRow(
-                "\u6B63\u5F0F\u5907\u4EFD\u4FDD\u7559\u6570",
+                L("row.backupRetention"),
                 new[] { "1", "2", "3" },
                 _general.BackupRetentionLimit.ToString(CultureInfo.InvariantCulture),
                 delegate(string value) { int number; if (int.TryParse(value, out number)) { _general.BackupRetentionLimit = number; SaveGeneral(); } }));
             storage.Body.Children.Add(ChoiceRow(
-                "\u4FDD\u7559\u65E5\u5FD7\u4F1A\u8BDD",
+                L("row.logSessions"),
                 new[] { "10", "20", "30" },
                 _general.LogSessionLimit.ToString(CultureInfo.InvariantCulture),
                 delegate(string value) { int number; if (int.TryParse(value, out number)) { _general.LogSessionLimit = number; SaveGeneral(); } }));
             storage.Body.Children.Add(ChoiceRow(
-                "\u5B9E\u65F6\u65E5\u5FD7\u884C\u6570",
+                L("row.uiLogLines"),
                 new[] { "180", "260", "400" },
                 _general.UiLogLineLimit.ToString(CultureInfo.InvariantCulture),
                 delegate(string value) { int number; if (int.TryParse(value, out number)) { _general.UiLogLineLimit = number; SaveGeneral(); } }));
-            storage.Body.Children.Add(ReadOnlyRow("\u65E5\u5FD7\u603B\u4E0A\u9650", "10 MB", "\u8D85\u51FA\u540E\u6309\u65E7\u5230\u65B0\u6E05\u7406"));
-            storage.Body.Children.Add(CommandRow("\u6253\u5F00 Logs \u76EE\u5F55", delegate { OpenPath(Path.Combine(_root, "Logs")); }));
+            storage.Body.Children.Add(ReadOnlyRow(L("row.logTotalLimit"), L("status.maxLogSize", "10", L("unit.mb")), L("desc.logTotalLimit")));
+            storage.Body.Children.Add(CommandRow(L("button.openLogs"), delegate { OpenPath(Path.Combine(_root, "Logs")); }));
             _sections.Children.Add(storage.Root);
 
             if (_feedAvailable)
             {
                 int sourceCount = (_feed.IncludeTibo ? 1 : 0) + (_feed.IncludeOpenAI ? 1 : 0) + (_feed.IncludeChatGPT ? 1 : 0);
-                DisclosureSection feed = Section("\u2601", "\u52A8\u6001",
-                    sourceCount.ToString(CultureInfo.InvariantCulture) + " \u4E2A\u8D26\u53F7 \u00B7 " +
-                    _feed.MaximumPosts.ToString(CultureInfo.InvariantCulture) + " \u6761", false);
-                feed.Body.Children.Add(ToggleRow("\u5F00\u542F\u52A8\u6001\u529F\u80FD", "\u5173\u95ED\u540E\u4E0D\u663E\u793A\u516C\u5F00\u52A8\u6001\u7A97\u53E3", _feed.Enabled,
+                DisclosureSection feed = Section("\u2601", L("section.activity"),
+                    L("summary.activity", sourceCount.ToString(CultureInfo.InvariantCulture), _feed.MaximumPosts.ToString(CultureInfo.InvariantCulture)), false);
+                feed.Body.Children.Add(ToggleRow(L("row.enableActivity"), L("desc.enableActivity"), _feed.Enabled,
                     delegate(bool value) { _feed.Enabled = value; SaveFeed(); }));
-                feed.Body.Children.Add(ToggleRow("Tibo", "@thsottiaux", _feed.IncludeTibo,
+                feed.Body.Children.Add(ToggleRow(L("feed.tibo"), L("feed.tibo.description"), _feed.IncludeTibo,
                     delegate(bool value) { _feed.IncludeTibo = value; SaveFeed(); }));
-                feed.Body.Children.Add(ToggleRow("OpenAI", "@OpenAI", _feed.IncludeOpenAI,
+                feed.Body.Children.Add(ToggleRow(L("feed.openai"), L("feed.openai.description"), _feed.IncludeOpenAI,
                     delegate(bool value) { _feed.IncludeOpenAI = value; SaveFeed(); }));
-                feed.Body.Children.Add(ToggleRow("ChatGPT", "@ChatGPT", _feed.IncludeChatGPT,
+                feed.Body.Children.Add(ToggleRow(L("feed.chatgpt"), L("feed.chatgpt.description"), _feed.IncludeChatGPT,
                     delegate(bool value) { _feed.IncludeChatGPT = value; SaveFeed(); }));
-                feed.Body.Children.Add(ChoiceRow("\u663E\u793A\u52A8\u6001", new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" },
+                feed.Body.Children.Add(ChoiceRow(L("row.activityItems"), new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" },
                     _feed.MaximumPosts.ToString(CultureInfo.InvariantCulture),
                     delegate(string value) { int number; if (int.TryParse(value, out number)) { _feed.MaximumPosts = number; SaveFeed(); } }));
                 feed.Body.Children.Add(ToggleRow(
-                    "Jina Reader \u540E\u5907",
-                    "RSS \u5931\u6548\u65F6\u964D\u7EA7\u8BFB\u53D6\u516C\u5F00\u9875\u9762",
+                    L("row.readerFallback"),
+                    L("desc.readerFallback"),
                     _feed.UseJinaFallback,
                     delegate(bool value) { _feed.UseJinaFallback = value; SaveFeed(); }));
-                feed.Body.Children.Add(CommandRow("\u6253\u5F00\u52A8\u6001", delegate { if (_feed.Enabled) _openFeed(); }));
+                feed.Body.Children.Add(CommandRow(L("button.openActivity"), delegate { if (_feed.Enabled) _openFeed(); }));
                 _sections.Children.Add(feed.Root);
             }
 
-            DisclosureSection games = Section("\u25C8", "\u5C0F\u6E38\u620F", "\u8D2A\u5403\u86C7 \u00B7 \u626B\u96F7", false);
-            games.Body.Children.Add(ReadOnlyRow("\u5DF2\u5B89\u88C5", "\u8D2A\u5403\u86C7\u3001\u626B\u96F7", "\u6E38\u620F\u8FD0\u884C\u65F6\u53EF\u4FDD\u6301\u542F\u52A8\u5668\u4E0D\u81EA\u52A8\u5173\u95ED"));
-            games.Body.Children.Add(CommandRow("\u9009\u62E9\u5C0F\u6E38\u620F", _openGames));
+            DisclosureSection games = Section("\u25C8", L("section.games"), L("summary.games"), false);
+            games.Body.Children.Add(ReadOnlyRow(L("status.installed"), L("games.value"), L("desc.games")));
+            games.Body.Children.Add(CommandRow(L("button.chooseGame"), _openGames));
             _sections.Children.Add(games.Root);
 
-            DisclosureSection about = Section("\u24D8", "\u66F4\u65B0\u4E0E\u5173\u4E8E", "v3.1 \u00B7 Windows 11", false);
-            about.Body.Children.Add(ReadOnlyRow("\u5F53\u524D\u7248\u672C", "3.1", "\u81EA\u9002\u5E94\u63D2\u4EF6\u4FEE\u590D\u3001\u52A8\u6001\u805A\u5408\u4E0E\u672C\u5730\u5C0F\u6E38\u620F"));
-            about.Body.Children.Add(CommandRow("\u68C0\u67E5\u5E76\u5B89\u88C5\u66F4\u65B0", OpenUpdateCenter));
+            DisclosureSection about = Section("\u24D8", L("section.about"), L("summary.about", "v3.1"), false);
+            about.Body.Children.Add(ReadOnlyRow(L("row.currentVersion"), "3.1", L("desc.about")));
+            about.Body.Children.Add(CommandRow(L("button.checkUpdate"), OpenUpdateCenter));
             about.Body.Children.Add(new TextBlock
             {
-                Text = "\u8BBE\u7F6E\u4E2D\u5FC3\u91C7\u7528\u539F\u521B WPF \u5B9E\u73B0\u3002\u89C6\u89C9\u4E0A\u53C2\u8003\u73B0\u4EE3\u5F00\u6E90\u76D1\u63A7\u5DE5\u5177\u7684\u7D27\u51D1\u6298\u53E0\u4FE1\u606F\u67B6\u6784\uFF0C\u672A\u590D\u5236\u5176\u6E90\u7801\u6216\u8D44\u4EA7\u3002",
+                Text = L("disclaimer"),
                 Foreground = Brush("#FF7F8A95"),
                 FontSize = 10,
                 TextWrapping = TextWrapping.Wrap,
@@ -348,7 +350,7 @@ namespace WinBridgeRecovery
             };
             TextBlock state = new TextBlock
             {
-                Text = initial ? "\u5F00" : "\u5173",
+                Text = L(initial ? "status.on" : "status.off"),
                 Foreground = initial ? Brush("#FF55E7B0") : Brush("#FF8B949D"),
                 FontSize = 10,
                 FontWeight = FontWeights.SemiBold,
@@ -365,20 +367,20 @@ namespace WinBridgeRecovery
                 Cursor = Cursors.Hand,
                 FocusVisualStyle = null,
                 Template = CreateSwitchTemplate(),
-                ToolTip = initial ? "\u5DF2\u5F00\u542F" : "\u5DF2\u5173\u95ED"
+                ToolTip = L(initial ? "status.enabled" : "status.disabled")
             };
             toggle.Checked += delegate
             {
-                state.Text = "\u5F00";
+                state.Text = L("status.on");
                 state.Foreground = Brush("#FF55E7B0");
-                toggle.ToolTip = "\u5DF2\u5F00\u542F";
+                toggle.ToolTip = L("status.enabled");
                 changed(true);
             };
             toggle.Unchecked += delegate
             {
-                state.Text = "\u5173";
+                state.Text = L("status.off");
                 state.Foreground = Brush("#FF8B949D");
-                toggle.ToolTip = "\u5DF2\u5173\u95ED";
+                toggle.ToolTip = L("status.disabled");
                 changed(false);
             };
             switchGroup.Children.Add(state);
@@ -459,8 +461,8 @@ namespace WinBridgeRecovery
         {
             Grid row = BaseRow();
             row.Children.Add(RowCopy(
-                L("\u754C\u9762\u4E0E\u7FFB\u8BD1\u8BED\u8A00", "Interface and translation language", "Langue de l'interface et de traduction", "Idioma de interfaz y traducci\u00F3n", "\u042F\u0437\u044B\u043A \u0438\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0430 \u0438 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0430", "\u0644\u063A\u0629 \u0627\u0644\u0648\u0627\u062C\u0647\u0629 \u0648\u0627\u0644\u062A\u0631\u062C\u0645\u0629"),
-                L("\u9996\u6B21\u542F\u52A8\u8DDF\u968F Windows\uFF0C\u53EF\u624B\u52A8\u66F4\u6539", "Detected from Windows on first run", "D\u00E9tect\u00E9 depuis Windows au premier lancement", "Detectado desde Windows en el primer inicio", "\u041F\u0440\u0438 \u043F\u0435\u0440\u0432\u043E\u043C \u0437\u0430\u043F\u0443\u0441\u043A\u0435 \u0431\u0435\u0440\u0451\u0442\u0441\u044F \u0438\u0437 Windows", "\u064A\u062A\u0645 \u0627\u0643\u062A\u0634\u0627\u0641\u0647\u0627 \u0645\u0646 Windows \u0639\u0646\u062F \u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u0623\u0648\u0644")));
+                L("language.title"),
+                L("language.description")));
             ComboBox combo = new ComboBox
             {
                 Width = 112,
@@ -471,24 +473,27 @@ namespace WinBridgeRecovery
                 FontSize = 10
             };
             string[] codes = { "zh", "en", "fr", "es", "ru", "ar" };
-            string[] names = { "\u4E2D\u6587", "English", "Fran\u00E7ais", "Espa\u00F1ol", "\u0420\u0443\u0441\u0441\u043A\u0438\u0439", "\u0627\u0644\u0639\u0631\u0628\u064A\u0629" };
-            for (int i = 0; i < names.Length; i++) combo.Items.Add(names[i]);
+            string[] languageKeys = { "language.zh", "language.en", "language.fr", "language.es", "language.ru", "language.ar" };
+            for (int i = 0; i < languageKeys.Length; i++) combo.Items.Add(L(languageKeys[i]));
             int selected = Array.IndexOf(codes, _language.Code);
             combo.SelectedIndex = selected < 0 ? 1 : selected;
             combo.SelectionChanged += delegate
             {
                 if (combo.SelectedIndex < 0) return;
-                _language.Code = codes[combo.SelectedIndex];
+                string nextCode = codes[combo.SelectedIndex];
+                if (String.Equals(_language.Code, nextCode, StringComparison.OrdinalIgnoreCase)) return;
+                _language.Code = nextCode;
                 _language.Save(_root);
+                MessageBox.Show(this, L("language.restart.message"), L("language.restart.title"), MessageBoxButton.OK, MessageBoxImage.Information);
             };
             Grid.SetColumn(combo, 1);
             row.Children.Add(combo);
             return row;
         }
 
-        private string L(string zh, string en, string fr, string es, string ru, string ar)
+        private string L(string key, params object[] args)
         {
-            return LauncherLocale.Pick(_language.Code, zh, en, fr, es, ru, ar);
+            return LauncherLocale.Format(_language.Code, key, args);
         }
 
         private UIElement ChoiceRow(string title, string[] values, string selected, Action<string> changed)
@@ -532,10 +537,10 @@ namespace WinBridgeRecovery
         private UIElement SegmentedThemeRow()
         {
             Grid row = BaseRow();
-            row.Children.Add(RowCopy("\u73BB\u7483\u80CC\u666F", "\u9009\u62E9\u7A97\u53E3\u6750\u8D28"));
+            row.Children.Add(RowCopy(L("row.glassBackground"), L("desc.glassBackground")));
             StackPanel choices = new StackPanel { Orientation = Orientation.Horizontal };
-            Button glass = SmallChoice("\u7CFB\u7EDF", string.Equals(_theme.Theme, "glass", StringComparison.OrdinalIgnoreCase));
-            Button classic = SmallChoice("\u9ED1\u8272", !string.Equals(_theme.Theme, "glass", StringComparison.OrdinalIgnoreCase));
+            Button glass = SmallChoice(L("theme.system"), string.Equals(_theme.Theme, "glass", StringComparison.OrdinalIgnoreCase));
+            Button classic = SmallChoice(L("theme.black"), !string.Equals(_theme.Theme, "glass", StringComparison.OrdinalIgnoreCase));
             glass.Click += delegate
             {
                 _theme.Theme = "glass"; SetChoice(glass, true); SetChoice(classic, false); SaveTheme();
