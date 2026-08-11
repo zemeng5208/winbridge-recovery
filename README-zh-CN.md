@@ -22,9 +22,13 @@ WinBridge Recovery 是早期公开脚本项目 **[Codex Desktop Plugin Repair Sa
 - 启动前关闭 Chrome 与 Edge，降低 Native Host 文件锁导致缓存更新失败的概率。
 - 只在检测到状态不一致时，从本机当前官方包重建缺失的 marketplace、缓存和注册信息。
 - 对深层插件依赖使用长路径安全的备份清单与校验逻辑。
-- 保留最多三份通过校验的恢复备份，普通卸载默认不删除备份。
+- 可由用户选择保留一、二或三份通过校验的恢复备份，普通卸载默认不删除备份。
 - 启动 Desktop 后进行两次连续静态一致性检查。
-- 提供诊断、回滚、自检、主题和小游戏界面。
+- 首次运行跟随 Windows 界面语言，支持中文、英文、法文、西班牙文、俄文和阿拉伯文六种联合国官方语言。
+- 可选显示 Tibo、OpenAI 与 ChatGPT 的公开动态；公共数据源不可达时自动隐藏，不尝试绕过网络限制。
+- 提供经典黑与毛玻璃主题，以及贪吃蛇和扫雷小游戏。
+- 在应用内检查版本、下载并校验安装程序，随后以更新模式运行安装器。
+- 提供诊断、回滚和自检。
 
 ## 安全边界
 
@@ -42,7 +46,7 @@ WinBridge Recovery 是早期公开脚本项目 **[Codex Desktop Plugin Repair Sa
 
 ### 免安装便携 ZIP
 
-也可以从最新 GitHub Release 下载 `WinBridge-Recovery-v3.0.0-beta.1-portable.zip`。将其中完整的 `WinBridge-Recovery` 文件夹解压到普通、可写的用户目录，然后运行：
+也可以从最新 GitHub Release 下载 `WinBridge-Recovery-v3.1.0-beta.1-portable.zip`。将其中完整的 `WinBridge-Recovery` 文件夹解压到普通、可写的用户目录，然后运行：
 
 ```text
 WinBridge-Recovery\LauncherUI\WinBridgeRecovery.exe
@@ -51,6 +55,20 @@ WinBridge-Recovery\LauncherUI\WinBridgeRecovery.exe
 便携包不会安装系统服务、创建卸载注册项，也不包含官方 Desktop 或插件文件。请保持解压后的目录结构完整，不要直接在 ZIP 内运行脚本。首次启动会检测当前 Windows 环境和本机已安装的官方 Desktop 包，修复资源只从目标电脑的当前官方包生成。
 
 无论使用安装器还是便携 ZIP，运行前都应核对 Release Notes 中公布的 SHA-256。项目使用的是自签测试证书，并非 Windows 公开信任的商业签名。
+
+## 应用内更新与公开动态
+
+设置页可以直接检查最新 GitHub Release，并在应用内下载安装器。更新辅助程序会等待启动器退出，再以更新模式启动安装器，从而优先沿用原有程序目录与备份目录。若安装器 SHA-256 与 Release 的 digest 或配套 `.sha256` 文件不一致，更新会立即停止。
+
+网络访问 GitHub Release 较慢时，可以在安装目录下创建 `Config\update.ini`：
+
+```ini
+mirror_prefix=https://example.invalid/
+```
+
+镜像地址必须代理原始 Release 下载地址。程序会先尝试镜像，再回退到官方地址；无论从哪里下载都必须通过同一 SHA-256 校验。这个设置不会绕过网络限制，也不能承诺任意国内网络一定可访问 GitHub 元数据。
+
+公开动态功能会先实际探测 RSS/reader 数据源，而不是根据 IP 或国家猜测。数据源全部不可达时，设置项和入口会自动隐藏；存在有效缓存时可显示缓存。翻译目标跟随界面语言，目前覆盖六种联合国官方语言。
 
 ## 验证标准
 

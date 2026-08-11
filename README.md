@@ -22,8 +22,12 @@ The predecessor repository is intentionally preserved rather than merged or rewr
 - Browser lock prevention by closing Chrome and Edge before cache reconciliation.
 - Repair only when static state is inconsistent.
 - Long-path-safe backup manifests for deeply nested plugin dependencies.
-- Up to three verified recovery backups, preserved by default during uninstall.
-- Post-launch consistency checks, diagnostics, rollback, self-test, themes, and mini games.
+- User-selectable retention of one, two, or three verified recovery backups; backups are preserved by default during uninstall.
+- Six interface languages: Arabic, Chinese, English, French, Russian, and Spanish. The first run follows the Windows UI language.
+- Optional public activity view for Tibo, OpenAI, and ChatGPT. It is hidden when its public sources cannot be reached and never attempts to bypass network restrictions.
+- Snake and Minesweeper mini games, plus classic-black and glass appearance themes.
+- In-app update download, SHA-256 verification, and installer launch. A configurable mirror prefix may be used before the official GitHub fallback.
+- Post-launch consistency checks, diagnostics, rollback, and self-test.
 
 ## Safety boundaries
 
@@ -41,7 +45,7 @@ Download `WinBridge-Recovery-Setup.exe` from the latest GitHub Release. The inst
 
 ### Portable ZIP
 
-Download `WinBridge-Recovery-v3.0.0-beta.1-portable.zip`, extract the complete `WinBridge-Recovery` folder to a normal user-writable location, and run:
+Download `WinBridge-Recovery-v3.1.0-beta.1-portable.zip`, extract the complete `WinBridge-Recovery` folder to a normal user-writable location, and run:
 
 ```text
 WinBridge-Recovery\LauncherUI\WinBridgeRecovery.exe
@@ -50,6 +54,20 @@ WinBridge-Recovery\LauncherUI\WinBridgeRecovery.exe
 The portable package does not install a service, create an uninstall entry, or bundle any official Desktop/plugin files. Keep the extracted folder together; do not run individual scripts directly from inside the ZIP. On first use it detects the current Windows and locally installed official Desktop package. Recovery content is generated only from that package.
 
 Before either method, compare the downloaded file's SHA-256 with the value shown in the Release notes. The included signature is a self-signed testing certificate and is not publicly trusted.
+
+## Updates and public activity
+
+The settings window can check the latest GitHub release and download the installer inside the application. The update helper waits for the launcher to exit, then opens the installer in update mode so the existing application and backup locations can be reused. The downloaded installer is rejected unless its SHA-256 matches the release digest or companion `.sha256` asset.
+
+For networks where GitHub release downloads are slow, an administrator may create `Config\update.ini` beside the installed launcher:
+
+```ini
+mirror_prefix=https://example.invalid/
+```
+
+The mirror must proxy the original release URL. It is tried first and the official URL remains the fallback. This option does not weaken verification and does not guarantee that any particular regional network can reach GitHub metadata.
+
+The public activity view is opt-in after a successful connectivity probe. If all configured public RSS/reader sources are unavailable, the setting and entry are hidden. Cached posts may still be shown when available. Translation follows the selected interface language and currently targets the six UN official languages.
 
 ## Build
 
