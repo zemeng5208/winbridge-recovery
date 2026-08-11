@@ -35,4 +35,7 @@ The installer uses a self-signed testing certificate. Windows may report an untr
 
 ```text
 SHA256  8F6158F88D501B75B9B252493CFF5B7086111A6BBE968172F3C172DACDF0A560  WinBridge-Recovery-Setup.exe
+SHA256  704AC5FC15DB8D74F3BC9FC5BCC7A5B677342049D2E9D8B211885F9DE74527DC  WinBridge-Recovery-v3.0.0-beta.1-portable.zip
 ```
+
+The portable ZIP contains 26 runtime/documentation files, passed the packaged self-test after extraction, and contains no machine-local configuration, logs, backups, resource mirrors, credentials, private signing material, or official Desktop/plugin payloads.
