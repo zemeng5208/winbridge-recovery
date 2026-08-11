@@ -31,58 +31,67 @@ public static class WinBridgeIconBuilder
     {
         Bitmap image = new Bitmap(1024, 1024, PixelFormat.Format32bppArgb);
         using (Graphics g = Graphics.FromImage(image))
+        using (GraphicsPath coolLink = Capsule(new RectangleF(222, 370, 580, 284), 42f))
+        using (GraphicsPath warmLink = Capsule(new RectangleF(222, 370, 580, 284), -42f))
         {
             Configure(g);
             g.Clear(Color.Transparent);
-            RectangleF tile = new RectangleF(92, 92, 840, 840);
-            using (GraphicsPath tilePath = RoundedRect(tile, 190))
-            using (LinearGradientBrush tileBrush = new LinearGradientBrush(
-                tile, Color.FromArgb(255, 11, 25, 48), Color.FromArgb(255, 27, 75, 111), 55f))
-            using (Pen rim = new Pen(Color.FromArgb(230, 109, 228, 255), 22f))
-            {
-                g.FillPath(tileBrush, tilePath);
-                g.DrawPath(rim, tilePath);
-            }
 
-            using (Pen glow = new Pen(Color.FromArgb(85, 78, 222, 255), 72f))
-            using (Pen bridge = new Pen(Color.FromArgb(255, 117, 235, 255), 38f))
-            using (Pen deck = new Pen(Color.White, 34f))
+            using (Pen coolGlow = new Pen(Color.FromArgb(74, 42, 210, 255), 104f))
+            using (Pen warmGlow = new Pen(Color.FromArgb(70, 255, 64, 196), 104f))
+            using (Pen coolEdge = new Pen(Color.FromArgb(190, 7, 16, 36), 78f))
+            using (Pen warmEdge = new Pen(Color.FromArgb(190, 7, 16, 36), 78f))
+            using (LinearGradientBrush coolBrush = new LinearGradientBrush(
+                new PointF(240, 760), new PointF(790, 260),
+                Color.FromArgb(255, 47, 226, 255), Color.FromArgb(255, 75, 111, 255)))
+            using (LinearGradientBrush warmBrush = new LinearGradientBrush(
+                new PointF(250, 250), new PointF(790, 780),
+                Color.FromArgb(255, 142, 91, 255), Color.FromArgb(255, 255, 68, 173)))
+            using (Pen cool = new Pen(coolBrush, 56f))
+            using (Pen warm = new Pen(warmBrush, 56f))
             {
-                glow.StartCap = glow.EndCap = LineCap.Round;
-                bridge.StartCap = bridge.EndCap = LineCap.Round;
-                deck.StartCap = deck.EndCap = LineCap.Round;
-                RectangleF arch = new RectangleF(252, 324, 520, 390);
-                g.DrawArc(glow, arch, 200, 140);
-                g.DrawArc(bridge, arch, 200, 140);
-                g.DrawLine(deck, 250, 666, 774, 666);
-                g.DrawLine(deck, 307, 452, 307, 706);
-                g.DrawLine(deck, 717, 452, 717, 706);
-            }
+                Prepare(coolGlow); Prepare(warmGlow);
+                Prepare(coolEdge); Prepare(warmEdge);
+                Prepare(cool); Prepare(warm);
 
-            PointF[] shield =
-            {
-                new PointF(512, 388), new PointF(628, 433),
-                new PointF(610, 600), new PointF(512, 690),
-                new PointF(414, 600), new PointF(396, 433)
-            };
-            using (SolidBrush shieldBrush = new SolidBrush(Color.FromArgb(255, 245, 252, 255)))
-            using (Pen shieldRim = new Pen(Color.FromArgb(255, 71, 190, 255), 18f))
-            using (Pen check = new Pen(Color.FromArgb(255, 21, 111, 160), 30f))
-            {
-                check.StartCap = check.EndCap = LineCap.Round;
-                g.FillPolygon(shieldBrush, shield);
-                g.DrawPolygon(shieldRim, shield);
-                g.DrawLines(check, new[] {
-                    new PointF(454, 536), new PointF(495, 579), new PointF(575, 493)
-                });
+                g.DrawPath(coolGlow, coolLink);
+                g.DrawPath(warmGlow, warmLink);
+                g.DrawPath(coolEdge, coolLink);
+                g.DrawPath(cool, coolLink);
+                g.DrawPath(warmEdge, warmLink);
+                g.DrawPath(warm, warmLink);
+
+                // At the opposite crossing, restore the cool link above the warm link.
+                GraphicsState state = g.Save();
+                using (GraphicsPath crossing = new GraphicsPath())
+                {
+                    crossing.AddEllipse(new RectangleF(315, 285, 265, 265));
+                    g.SetClip(crossing, CombineMode.Intersect);
+                    g.DrawPath(coolEdge, coolLink);
+                    g.DrawPath(cool, coolLink);
+                }
+                g.Restore(state);
             }
         }
         return image;
     }
 
+    private static GraphicsPath Capsule(RectangleF bounds, float angle)
+    {
+        GraphicsPath path = RoundedRect(bounds, bounds.Height / 2f);
+        using (Matrix transform = new Matrix())
+        {
+            transform.RotateAt(angle, new PointF(
+                bounds.Left + bounds.Width / 2f,
+                bounds.Top + bounds.Height / 2f));
+            path.Transform(transform);
+        }
+        return path;
+    }
+
     private static GraphicsPath RoundedRect(RectangleF bounds, float radius)
     {
-        float diameter = radius * 2;
+        float diameter = radius * 2f;
         GraphicsPath path = new GraphicsPath();
         path.AddArc(bounds.Left, bounds.Top, diameter, diameter, 180, 90);
         path.AddArc(bounds.Right - diameter, bounds.Top, diameter, diameter, 270, 90);
@@ -90,6 +99,13 @@ public static class WinBridgeIconBuilder
         path.AddArc(bounds.Left, bounds.Bottom - diameter, diameter, diameter, 90, 90);
         path.CloseFigure();
         return path;
+    }
+
+    private static void Prepare(Pen pen)
+    {
+        pen.StartCap = LineCap.Round;
+        pen.EndCap = LineCap.Round;
+        pen.LineJoin = LineJoin.Round;
     }
 
     private static void WriteIcon(Bitmap master, string path)
@@ -100,13 +116,11 @@ public static class WinBridgeIconBuilder
         {
             using (Bitmap frame = new Bitmap(size, size, PixelFormat.Format32bppArgb))
             using (Graphics g = Graphics.FromImage(frame))
-            using (MemoryStream stream = new MemoryStream())
             {
                 Configure(g);
                 g.Clear(Color.Transparent);
                 g.DrawImage(master, new Rectangle(0, 0, size, size));
-                frame.Save(stream, ImageFormat.Png);
-                frames.Add(stream.ToArray());
+                frames.Add(CreateDibFrame(frame));
             }
         }
         using (FileStream file = File.Create(path))
@@ -120,10 +134,8 @@ public static class WinBridgeIconBuilder
             {
                 writer.Write((byte)(sizes[i] == 256 ? 0 : sizes[i]));
                 writer.Write((byte)(sizes[i] == 256 ? 0 : sizes[i]));
-                writer.Write((byte)0);
-                writer.Write((byte)0);
-                writer.Write((ushort)1);
-                writer.Write((ushort)32);
+                writer.Write((byte)0); writer.Write((byte)0);
+                writer.Write((ushort)1); writer.Write((ushort)32);
                 writer.Write((uint)frames[i].Length);
                 writer.Write((uint)offset);
                 offset += frames[i].Length;
@@ -132,11 +144,44 @@ public static class WinBridgeIconBuilder
         }
     }
 
+    private static byte[] CreateDibFrame(Bitmap frame)
+    {
+        int width = frame.Width;
+        int height = frame.Height;
+        int colorBytes = width * height * 4;
+        int maskStride = ((width + 31) / 32) * 4;
+        byte[] mask = new byte[maskStride * height];
+        using (MemoryStream stream = new MemoryStream(40 + colorBytes + mask.Length))
+        using (BinaryWriter writer = new BinaryWriter(stream))
+        {
+            writer.Write((uint)40); writer.Write(width); writer.Write(height * 2);
+            writer.Write((ushort)1); writer.Write((ushort)32); writer.Write((uint)0);
+            writer.Write((uint)colorBytes); writer.Write(0); writer.Write(0);
+            writer.Write((uint)0); writer.Write((uint)0);
+            for (int y = height - 1; y >= 0; y--)
+            {
+                int maskRow = (height - 1 - y) * maskStride;
+                for (int x = 0; x < width; x++)
+                {
+                    Color pixel = frame.GetPixel(x, y);
+                    writer.Write(pixel.B); writer.Write(pixel.G);
+                    writer.Write(pixel.R); writer.Write(pixel.A);
+                    if (pixel.A < 8)
+                        mask[maskRow + (x / 8)] |= (byte)(0x80 >> (x % 8));
+                }
+            }
+            writer.Write(mask);
+            writer.Flush();
+            return stream.ToArray();
+        }
+    }
+
     private static void Configure(Graphics g)
     {
+        g.CompositingMode = CompositingMode.SourceOver;
         g.CompositingQuality = CompositingQuality.HighQuality;
         g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.SmoothingMode = SmoothingMode.HighQuality;
         g.PixelOffsetMode = PixelOffsetMode.HighQuality;
     }
 }
