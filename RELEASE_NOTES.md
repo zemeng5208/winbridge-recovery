@@ -33,7 +33,7 @@ Independent Windows recovery launcher for GPT/Codex Desktop Browser, Chrome, and
 - Social activity window loaded four live/cached public posts and completed Chinese translation: PASS during development.
 - Browser, Chrome, and Computer Use independent interaction checks: previously PASS on the development machine; this historical result is not a substitute for a fresh target-machine check.
 - In-app update source compiles and requires SHA-256 before installation: PASS.
-- Real v3.1 update metadata and asset download: pending until the v3.1 release assets are published; the update path rejects installers without a matching SHA-256.
+- v3.1 update metadata is supplied by the GitHub Release and companion SHA-256 files; the update path rejects installers without a matching SHA-256.
 - Final v3.1 installer and uninstaller isolated checks: PASS. The installed payload reported v3.1.0 and MIT License, uninstall removed only the owned product, preserved the selected backup folder, and left an unrelated marker untouched.
 - Final portable ZIP clean-extraction self-test: PASS. The original repair-core script hash remained unchanged.
 - Public source and package privacy scan: PASS with zero detected machine-local paths, email addresses, access tokens, or private-key markers.
