@@ -26,7 +26,7 @@ namespace WinBridgeRecovery
                 }
                 if (!File.Exists(installer)) return 2;
                 Thread.Sleep(500);
-                Process.Start(new ProcessStartInfo(installer) { UseShellExecute = true });
+                Process.Start(new ProcessStartInfo(installer, "--update") { UseShellExecute = true });
                 return 0;
             }
             catch { return 1; }

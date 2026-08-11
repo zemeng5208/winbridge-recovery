@@ -47,6 +47,46 @@ namespace WinBridgeSetup
                 BackupFolder);
         }
 
+        internal static void ExistingInstallationPaths(out string installRoot, out string backupRoot)
+        {
+            installRoot = string.Empty;
+            backupRoot = string.Empty;
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(RegistryPath, false))
+                {
+                    if (key != null) installRoot = Convert.ToString(key.GetValue("InstallLocation"));
+                }
+            }
+            catch
+            {
+                installRoot = string.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(installRoot)) return;
+            try
+            {
+                string configDirectory = Path.Combine(installRoot, ProductFolder, "Config");
+                backupRoot = ReadConfigurationValue(Path.Combine(configDirectory, "storage.ini"), "backup_root");
+                if (string.IsNullOrWhiteSpace(backupRoot))
+                    backupRoot = ReadConfigurationValue(Path.Combine(configDirectory, "install-manifest.txt"), "backup_root");
+            }
+            catch
+            {
+                backupRoot = string.Empty;
+            }
+        }
+
+        private static string ReadConfigurationValue(string path, string name)
+        {
+            if (!File.Exists(path)) return string.Empty;
+            string prefix = name + "=";
+            foreach (string line in File.ReadAllLines(path, Encoding.UTF8))
+                if (line.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    return line.Substring(prefix.Length).Trim();
+            return string.Empty;
+        }
+
         internal static void Install(
             string installRoot,
             string backupRoot,
@@ -291,7 +331,7 @@ namespace WinBridgeSetup
         private bool _installed;
         private bool _backupWasEdited;
 
-        internal SetupForm()
+        internal SetupForm(bool updateMode, string installRoot, string backupRoot)
         {
             Text = "WinBridge Recovery Setup";
             Width = 700;
@@ -308,14 +348,16 @@ namespace WinBridgeSetup
             Controls.Add(new Label { Text = "Testing build by zemeng5208  |  github.com/zemeng5208", ForeColor = Color.FromArgb(135, 215, 180), AutoSize = true, Location = new Point(38, 92) });
 
             Controls.Add(new Label { Text = "Installation folder", AutoSize = true, Location = new Point(38, 116) });
-            _installPath = new TextBox { Text = InstallEngine.DefaultInstallRoot(), Location = new Point(40, 142), Width = 510, Height = 28, BackColor = Color.FromArgb(26, 31, 36), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+            string initialInstallRoot = string.IsNullOrWhiteSpace(installRoot) ? InstallEngine.DefaultInstallRoot() : installRoot;
+            string initialBackupRoot = string.IsNullOrWhiteSpace(backupRoot) ? InstallEngine.DefaultBackupRoot(initialInstallRoot) : backupRoot;
+            _installPath = new TextBox { Text = initialInstallRoot, Location = new Point(40, 142), Width = 510, Height = 28, BackColor = Color.FromArgb(26, 31, 36), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
             Controls.Add(_installPath);
             Button browseInstall = new Button { Text = "Browse", Location = new Point(562, 140), Width = 92, Height = 30 };
             browseInstall.Click += delegate { BrowseInstall(); };
             Controls.Add(browseInstall);
 
             Controls.Add(new Label { Text = "Golden backup folder", AutoSize = true, Location = new Point(38, 188) });
-            _backupPath = new TextBox { Text = InstallEngine.DefaultBackupRoot(_installPath.Text), Location = new Point(40, 214), Width = 510, Height = 28, BackColor = Color.FromArgb(26, 31, 36), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
+            _backupPath = new TextBox { Text = initialBackupRoot, Location = new Point(40, 214), Width = 510, Height = 28, BackColor = Color.FromArgb(26, 31, 36), ForeColor = Color.White, BorderStyle = BorderStyle.FixedSingle };
             _backupPath.TextChanged += delegate { if (_backupPath.Focused) _backupWasEdited = true; };
             Controls.Add(_backupPath);
             Button browseBackup = new Button { Text = "Browse", Location = new Point(562, 212), Width = 92, Height = 30 };
@@ -324,12 +366,12 @@ namespace WinBridgeSetup
 
             Controls.Add(new Label { Text = "Existing valid backups in the selected folder are preserved and reused only after version and hash validation.", ForeColor = Color.FromArgb(135, 215, 180), AutoSize = true, Location = new Point(40, 256) });
 
-            _status = new Label { Text = "Ready to install.", ForeColor = Color.FromArgb(115, 222, 237), AutoEllipsis = true, Location = new Point(40, 292), Width = 614, Height = 24 };
+            _status = new Label { Text = updateMode ? "Ready to update the existing installation." : "Ready to install.", ForeColor = Color.FromArgb(115, 222, 237), AutoEllipsis = true, Location = new Point(40, 292), Width = 614, Height = 24 };
             Controls.Add(_status);
             _progress = new ProgressBar { Location = new Point(40, 322), Width = 614, Height = 12, Style = ProgressBarStyle.Continuous, Minimum = 0, Maximum = 100 };
             Controls.Add(_progress);
 
-            _install = new Button { Text = "Install", Location = new Point(534, 354), Width = 120, Height = 38, BackColor = Color.FromArgb(40, 182, 136), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+            _install = new Button { Text = updateMode ? "Update" : "Install", Location = new Point(534, 354), Width = 120, Height = 38, BackColor = Color.FromArgb(40, 182, 136), ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
             _install.FlatAppearance.BorderSize = 0;
             _install.Click += delegate { if (_installed) Close(); else InstallNow(); };
             Controls.Add(_install);
@@ -406,17 +448,23 @@ namespace WinBridgeSetup
             try
             {
                 bool silent = Array.Exists(args, delegate(string value) { return string.Equals(value, "--silent", StringComparison.OrdinalIgnoreCase); });
+                bool updateMode = Array.Exists(args, delegate(string value) { return string.Equals(value, "--update", StringComparison.OrdinalIgnoreCase); });
+                string existingInstallRoot = string.Empty;
+                string existingBackupRoot = string.Empty;
+                if (updateMode) InstallEngine.ExistingInstallationPaths(out existingInstallRoot, out existingBackupRoot);
                 if (silent)
                 {
                     string installRoot = GetArgument(args, "--install-root");
                     string backupRoot = GetArgument(args, "--backup-root");
+                    if (updateMode && string.IsNullOrWhiteSpace(installRoot)) installRoot = existingInstallRoot;
+                    if (updateMode && string.IsNullOrWhiteSpace(backupRoot)) backupRoot = existingBackupRoot;
                     bool testMode = Array.Exists(args, delegate(string value) { return string.Equals(value, "--test-mode", StringComparison.OrdinalIgnoreCase); });
                     InstallEngine.Install(installRoot, backupRoot, null, !testMode);
                     return 0;
                 }
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
-                Application.Run(new SetupForm());
+                Application.Run(new SetupForm(updateMode, existingInstallRoot, existingBackupRoot));
                 return 0;
             }
             catch (Exception ex)

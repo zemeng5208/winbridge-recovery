@@ -20,6 +20,7 @@ namespace WinBridgeRecovery
         private const string CurrentVersion = "3.1.0";
         private const string ApiUrl = "https://api.github.com/repos/zemeng5208/winbridge-recovery/releases/latest";
         private const string InstallerName = "WinBridge-Recovery-Setup.exe";
+        private const int InstallerDownloadTimeout = 60000;
         private readonly string _root;
         private readonly TextBlock _status = new TextBlock();
         private readonly ProgressBar _progress = new ProgressBar();
@@ -165,7 +166,7 @@ namespace WinBridgeRecovery
             {
                 try
                 {
-                    using (WebClient client = CreateClient()) client.DownloadFile(url, destination);
+                    using (WebClient client = CreateClient(InstallerDownloadTimeout)) client.DownloadFile(url, destination);
                     string actual = Sha256(destination);
                     if (!actual.Equals(expected, StringComparison.OrdinalIgnoreCase))
                     {
@@ -191,17 +192,37 @@ namespace WinBridgeRecovery
 
         private static string DownloadText(string url, int timeout)
         {
-            using (WebClient client = CreateClient())
+            using (WebClient client = CreateClient(timeout))
             {
                 client.Headers[HttpRequestHeader.UserAgent] = "WinBridge-Recovery/3.1";
                 return client.DownloadString(url);
             }
         }
 
-        private static WebClient CreateClient()
+        private static WebClient CreateClient(int timeout)
         {
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            return new WebClient { Encoding = Encoding.UTF8 };
+            return new TimeoutWebClient(timeout) { Encoding = Encoding.UTF8 };
+        }
+
+        private sealed class TimeoutWebClient : WebClient
+        {
+            private readonly int _timeout;
+
+            internal TimeoutWebClient(int timeout)
+            {
+                if (timeout <= 0) throw new ArgumentOutOfRangeException("timeout");
+                _timeout = timeout;
+            }
+
+            protected override WebRequest GetWebRequest(Uri address)
+            {
+                WebRequest request = base.GetWebRequest(address);
+                request.Timeout = _timeout;
+                HttpWebRequest httpRequest = request as HttpWebRequest;
+                if (httpRequest != null) httpRequest.ReadWriteTimeout = _timeout;
+                return request;
+            }
         }
 
         private static string Sha256(string path)
