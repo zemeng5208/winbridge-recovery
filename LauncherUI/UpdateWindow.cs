@@ -17,8 +17,8 @@ namespace WinBridgeRecovery
 {
     public sealed class UpdateWindow : Window
     {
-        private const string CurrentVersion = "3.1.0";
-        private const string ApiUrl = "https://api.github.com/repos/zemeng5208/winbridge-recovery/releases/latest";
+        private const string CurrentVersion = "3.1.1";
+        private const string ApiUrl = "https://api.github.com/repos/zemeng5208/winbridge-recovery/releases?per_page=20";
         private const string InstallerName = "WinBridge-Recovery-Setup.exe";
         private const int InstallerDownloadTimeout = 60000;
         private readonly string _root;
@@ -131,22 +131,37 @@ namespace WinBridgeRecovery
         private ReleaseInfo ReadLatestRelease()
         {
             string json = DownloadText(ApiUrl, 10000);
-            Dictionary<string, object> root = new JavaScriptSerializer().DeserializeObject(json) as Dictionary<string, object>;
-            if (root == null) throw new InvalidDataException("Invalid release metadata.");
-            ReleaseInfo result = new ReleaseInfo { Version = Convert.ToString(root["tag_name"], CultureInfo.InvariantCulture) };
-            object[] assets = root.ContainsKey("assets") ? root["assets"] as object[] : null;
-            if (assets != null)
+            object[] releases = new JavaScriptSerializer().DeserializeObject(json) as object[];
+            if (releases == null) throw new InvalidDataException("Invalid release metadata.");
+            ReleaseInfo result = null;
+            Version selectedVersion = null;
+            foreach (object releaseValue in releases)
             {
+                Dictionary<string, object> root = releaseValue as Dictionary<string, object>;
+                if (root == null || (root.ContainsKey("draft") && Convert.ToBoolean(root["draft"]))) continue;
+                string tag = Convert.ToString(root["tag_name"], CultureInfo.InvariantCulture);
+                Version candidate;
+                try { candidate = ParseVersion(tag); }
+                catch { continue; }
+                object[] assets = root.ContainsKey("assets") ? root["assets"] as object[] : null;
+                if (assets == null) continue;
+                ReleaseInfo candidateRelease = new ReleaseInfo { Version = tag };
                 foreach (object value in assets)
                 {
                     Dictionary<string, object> asset = value as Dictionary<string, object>;
                     if (asset == null || Convert.ToString(asset["name"]) != InstallerName) continue;
-                    result.Url = Convert.ToString(asset["browser_download_url"]);
-                    if (asset.ContainsKey("digest")) result.Digest = Convert.ToString(asset["digest"]);
+                    candidateRelease.Url = Convert.ToString(asset["browser_download_url"]);
+                    if (asset.ContainsKey("digest")) candidateRelease.Digest = Convert.ToString(asset["digest"]);
                     break;
                 }
+                if (string.IsNullOrWhiteSpace(candidateRelease.Url)) continue;
+                if (selectedVersion == null || candidate > selectedVersion)
+                {
+                    selectedVersion = candidate;
+                    result = candidateRelease;
+                }
             }
-            if (string.IsNullOrWhiteSpace(result.Url)) throw new InvalidDataException("The release does not contain the installer.");
+            if (result == null) throw new InvalidDataException("No installable release is available.");
             return result;
         }
 
@@ -196,7 +211,7 @@ namespace WinBridgeRecovery
         {
             using (WebClient client = CreateClient(timeout))
             {
-                client.Headers[HttpRequestHeader.UserAgent] = "WinBridge-Recovery/3.1";
+            client.Headers[HttpRequestHeader.UserAgent] = "WinBridge-Recovery/3.1.1";
                 return client.DownloadString(url);
             }
         }

@@ -369,7 +369,7 @@ namespace WinBridgeRecovery
             using (SocialTimeoutWebClient client = new SocialTimeoutWebClient(timeout))
             {
                 client.Encoding = Encoding.UTF8;
-                client.Headers[HttpRequestHeader.UserAgent] = "Mozilla/5.0 WinBridge-Recovery/3.1";
+            client.Headers[HttpRequestHeader.UserAgent] = "Mozilla/5.0 WinBridge-Recovery/3.1.1";
                 return client.DownloadString(url);
             }
         }
@@ -610,7 +610,7 @@ namespace WinBridgeRecovery
                     request.Method = "GET";
                     request.Timeout = 2200;
                     request.ReadWriteTimeout = 2200;
-                    request.UserAgent = "WinBridge-Recovery/3.1";
+            request.UserAgent = "WinBridge-Recovery/3.1.1";
                     using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
                         if ((int)response.StatusCode >= 200 && (int)response.StatusCode < 400) return true;
                 }

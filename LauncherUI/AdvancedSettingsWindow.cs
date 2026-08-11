@@ -248,8 +248,8 @@ namespace WinBridgeRecovery
             games.Body.Children.Add(CommandRow(L("button.chooseGame"), _openGames));
             _sections.Children.Add(games.Root);
 
-            DisclosureSection about = Section("\u24D8", L("section.about"), L("summary.about", "v3.1"), false);
-            about.Body.Children.Add(ReadOnlyRow(L("row.currentVersion"), "3.1", L("desc.about")));
+            DisclosureSection about = Section("\u24D8", L("section.about"), L("summary.about", "v3.1.1"), false);
+            about.Body.Children.Add(ReadOnlyRow(L("row.currentVersion"), "3.1.1", L("desc.about")));
             about.Body.Children.Add(CommandRow(L("button.checkUpdate"), OpenUpdateCenter));
             about.Body.Children.Add(new TextBlock
             {

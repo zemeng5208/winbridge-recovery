@@ -13,8 +13,8 @@ using Microsoft.Win32;
 [assembly: AssemblyDescription("Testing stage. Authorized recipients may test and perform secondary development. https://github.com/zemeng5208")]
 [assembly: AssemblyCompany("https://github.com/zemeng5208")]
 [assembly: AssemblyProduct("WinBridge Recovery")]
-[assembly: AssemblyVersion("3.1.0.0")]
-[assembly: AssemblyFileVersion("3.1.0.0")]
+[assembly: AssemblyVersion("3.1.1.0")]
+[assembly: AssemblyFileVersion("3.1.1.0")]
 
 namespace WinBridgeSetup
 {
@@ -235,7 +235,7 @@ namespace WinBridgeSetup
             Array.Sort(files, StringComparer.OrdinalIgnoreCase);
             string[] lines = new string[files.Length + 5];
             lines[0] = "product=WinBridge Recovery";
-            lines[1] = "version=3.1.0";
+            lines[1] = "version=3.1.1";
             lines[2] = "install_root=" + installRoot;
             lines[3] = "backup_root=" + backupRoot;
             lines[4] = "installed_utc=" + DateTime.UtcNow.ToString("o");
@@ -310,7 +310,7 @@ namespace WinBridgeSetup
             using (RegistryKey key = Registry.CurrentUser.CreateSubKey(RegistryPath))
             {
                 key.SetValue("DisplayName", "WinBridge Recovery");
-                key.SetValue("DisplayVersion", "3.1.0");
+                key.SetValue("DisplayVersion", "3.1.1");
                 key.SetValue("Publisher", "WinBridge Recovery");
                 key.SetValue("InstallLocation", installRoot);
                 key.SetValue("DisplayIcon", launcher + ",0");

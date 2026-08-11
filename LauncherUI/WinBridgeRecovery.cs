@@ -33,8 +33,8 @@ using Microsoft.Win32;
 [assembly: System.Reflection.AssemblyDescription("Testing stage. Authorized recipients may test and perform secondary development. https://github.com/zemeng5208")]
 [assembly: System.Reflection.AssemblyCompany("https://github.com/zemeng5208")]
 [assembly: System.Reflection.AssemblyProduct("WinBridge Recovery")]
-[assembly: System.Reflection.AssemblyVersion("3.1.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("3.1.0.0")]
+[assembly: System.Reflection.AssemblyVersion("3.1.1.0")]
+[assembly: System.Reflection.AssemblyFileVersion("3.1.1.0")]
 
 namespace WinBridgeRecovery
 {
@@ -300,7 +300,7 @@ namespace WinBridgeRecovery
         private SnakeGameWindow _snakeGame;
         private GameSelectionWindow _gameSelector;
         private ThemeSettingsWindow _themeWindow;
-        private AdvancedSettingsWindow _settingsWindow;
+        private Window _settingsWindow;
         private GeneralSettingsWindow _generalWindow;
         private SocialFeedWindow _socialFeedWindow;
         private LauncherThemeSettings _themeSettings;
@@ -1068,7 +1068,7 @@ namespace WinBridgeRecovery
                     "glass",
                     StringComparison.OrdinalIgnoreCase));
             if (!_themeSettings.ReduceMotion) _particles.Start();
-            _progressTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(24) };
+            _progressTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(33) };
             _progressTimer.Tick += delegate
             {
                 _displayProgress += (_targetProgress - _displayProgress) * 0.08;
@@ -1168,6 +1168,25 @@ namespace WinBridgeRecovery
                 _settingsWindow.Activate();
                 return;
             }
+            string iconPath = System.IO.Path.Combine(
+                _root, "LauncherUI", "Assets", "WinBridge.png");
+            string gamepadPath = System.IO.Path.Combine(
+                _root, "LauncherUI", "Assets", "Gamepad-Color.png");
+            _settingsWindow = new LauncherSettingsWindow(
+                iconPath,
+                gamepadPath,
+                OpenAdvancedSettings,
+                OpenThemeSettings,
+                OpenGameSelector,
+                OpenSocialFeed);
+            _settingsWindow.Owner = this;
+            _settingsWindow.Closed += delegate { _settingsWindow = null; };
+            _settingsWindow.Show();
+        }
+
+        private void OpenAdvancedSettings()
+        {
+            if (_settingsWindow != null) _settingsWindow.Close();
             string iconPath = System.IO.Path.Combine(
                 _root, "LauncherUI", "Assets", "WinBridge.png");
             _settingsWindow = new AdvancedSettingsWindow(
@@ -1498,7 +1517,7 @@ namespace WinBridgeRecovery
         {
             string[] lines =
             {
-                "[INFO] WinBridge Recovery 3.1.0",
+                    "[INFO] WinBridge Recovery 3.1.1",
                 "[INFO] Package: OpenAI.Codex current Store package",
                 "[OK] Chrome and Edge are fully stopped.",
                 "[OK] Static plugin state is healthy.",
@@ -2699,14 +2718,14 @@ namespace WinBridgeRecovery
             {
                 Margin = new Thickness(12, 10, 12, 12)
             };
-            Button general = MenuRow(
-                BuildGeneralIcon(),
-                "\u5E38\u89C4",
-                "\u65E5\u5FD7\u3001\u81EA\u52A8\u5173\u95ED\u4E0E\u8D44\u6E90\u7BA1\u7406");
+            Button games = MenuRow(
+                BuildGameIcon(),
+                "\u5C0F\u6E38\u620F",
+                "\u8D2A\u5403\u86C7\u4E0E\u626B\u96F7");
             System.Windows.Automation.AutomationProperties.SetName(
-                general, "\u5E38\u89C4");
-            general.Click += delegate { _openGeneral(); };
-            menu.Children.Add(general);
+                games, "\u5C0F\u6E38\u620F");
+            games.Click += delegate { _openGames(); };
+            menu.Children.Add(games);
 
             Button theme = MenuRow(
                 BuildThemeIcon(),
@@ -2718,16 +2737,6 @@ namespace WinBridgeRecovery
             theme.Click += delegate { _openTheme(); };
             menu.Children.Add(theme);
 
-            Button games = MenuRow(
-                BuildGameIcon(),
-                "\u5C0F\u6E38\u620F",
-                "\u8D2A\u5403\u86C7\u4E0E\u626B\u96F7");
-            System.Windows.Automation.AutomationProperties.SetName(
-                games, "\u5C0F\u6E38\u620F");
-            games.Margin = new Thickness(0, 8, 0, 0);
-            games.Click += delegate { _openGames(); };
-            menu.Children.Add(games);
-
             Button social = MenuRow(
                 BuildSocialIcon(),
                 "\u770B\u770B\u4ED6 \u2197",
@@ -2737,6 +2746,16 @@ namespace WinBridgeRecovery
             social.Margin = new Thickness(0, 8, 0, 0);
             social.Click += delegate { _openSocial(); };
             menu.Children.Add(social);
+
+            Button more = MenuRow(
+                BuildGeneralIcon(),
+                "\u66F4\u591A\u8BBE\u7F6E",
+                "\u5B8C\u6574\u8BBE\u7F6E\u3001\u65E5\u5FD7\u3001\u5907\u4EFD\u3001\u8BED\u8A00\u4E0E\u66F4\u65B0");
+            System.Windows.Automation.AutomationProperties.SetName(
+                more, "\u66F4\u591A\u8BBE\u7F6E");
+            more.Margin = new Thickness(0, 8, 0, 0);
+            more.Click += delegate { _openGeneral(); };
+            menu.Children.Add(more);
 
             Grid.SetRow(menu, 1);
             root.Children.Add(menu);
@@ -3981,8 +4000,8 @@ namespace WinBridgeRecovery
                 "#3D8CFF");
             snake.Click += delegate
             {
-                Close();
                 _openSnake();
+                Close();
             };
             Grid.SetRow(snake, 1);
             content.Children.Add(snake);
@@ -3995,8 +4014,8 @@ namespace WinBridgeRecovery
                 "#BE5CFF");
             minesweeper.Click += delegate
             {
-                Close();
                 _openMinesweeper();
+                Close();
             };
             Grid.SetRow(minesweeper, 1);
             Grid.SetColumn(minesweeper, 2);
@@ -5691,7 +5710,7 @@ namespace WinBridgeRecovery
         {
             return new ParticleTheme
             {
-                ParticleCount = 84,
+                ParticleCount = 60,
                 WaveCount = 4,
                 GlowEvery = 3,
                 MinimumSize = 1.7,
@@ -5741,7 +5760,7 @@ namespace WinBridgeRecovery
             ClipToBounds = true;
             Loaded += delegate { EnsureParticles(); };
             SizeChanged += delegate { ArrangeParticles(); };
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(33) };
+            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(50) };
             _timer.Tick += delegate { Animate(); };
         }
 
@@ -5838,9 +5857,9 @@ namespace WinBridgeRecovery
                 double amplitude = 7 + waveIndex * 6;
                 double speed = 0.72 + waveIndex * 0.21;
                 double direction = waveIndex == 1 ? -1 : 1;
-                for (int pointIndex = 0; pointIndex <= 56; pointIndex++)
+                for (int pointIndex = 0; pointIndex <= 40; pointIndex++)
                 {
-                    double ratio = pointIndex / 56.0;
+                    double ratio = pointIndex / 40.0;
                     double x = ratio * ActualWidth;
                     double y = centerY +
                         Math.Sin((ratio * 10.5) + (_phase * speed * direction) + waveIndex) * amplitude +
