@@ -6,6 +6,7 @@ Set-StrictMode -Version 2.0
 
 $root = $PSScriptRoot
 $source = Join-Path $root 'WinBridgeRecovery.cs'
+$minesweeperSource = Join-Path $root 'MinesweeperGameWindow.cs'
 $output = Join-Path $root 'WinBridgeRecovery.exe'
 $guardianSource = Join-Path $root 'WinBridgeGuardian.cs'
 $guardianOutput = Join-Path $root 'WinBridgeGuardian.exe'
@@ -17,6 +18,9 @@ $previous = $previousBase
 try {
   if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
     throw "Source file not found: $source"
+  }
+  if (-not (Test-Path -LiteralPath $minesweeperSource -PathType Leaf)) {
+    throw "Source file not found: $minesweeperSource"
   }
   if (-not (Test-Path -LiteralPath $icon -PathType Leaf)) {
     throw "Icon file not found: $icon"
@@ -55,7 +59,9 @@ try {
 
   $provider = New-Object Microsoft.CSharp.CSharpCodeProvider
   try {
-    $result = $provider.CompileAssemblyFromFile($compilerParameters, $source)
+    $result = $provider.CompileAssemblyFromFile(
+      $compilerParameters,
+      [string[]]@($source, $minesweeperSource))
   } finally {
     $provider.Dispose()
   }

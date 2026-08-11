@@ -296,7 +296,7 @@ namespace WinBridgeRecovery
         private readonly Brush _coral = BrushFrom("#FF746C");
 
         private Process _process;
-        private MiniGameWindow _miniGame;
+        private MinesweeperGameWindow _minesweeperGame;
         private SnakeGameWindow _snakeGame;
         private GameSelectionWindow _gameSelector;
         private ThemeSettingsWindow _themeWindow;
@@ -1346,7 +1346,7 @@ namespace WinBridgeRecovery
                 _root, "LauncherUI", "Assets", "WinBridge.png");
             _gameSelector = new GameSelectionWindow(
                 iconPath,
-                OpenBreakoutGame,
+                OpenMinesweeperGame,
                 OpenSnakeGame);
             _gameSelector.Closed += delegate
             {
@@ -1356,28 +1356,28 @@ namespace WinBridgeRecovery
             _gameSelector.Show();
         }
 
-        private void OpenBreakoutGame()
+        private void OpenMinesweeperGame()
         {
-            if (_miniGame != null)
+            if (_minesweeperGame != null)
             {
-                if (_miniGame.WindowState == WindowState.Minimized)
-                    _miniGame.WindowState = WindowState.Normal;
-                _miniGame.Activate();
+                if (_minesweeperGame.WindowState == WindowState.Minimized)
+                    _minesweeperGame.WindowState = WindowState.Normal;
+                _minesweeperGame.Activate();
                 return;
             }
             string stateDirectory = System.IO.Path.Combine(
                 _root, "LauncherUI", "State");
             string scorePath = System.IO.Path.Combine(
-                stateDirectory, "neon-breakout-best-score.txt");
+                stateDirectory, "neon-minesweeper-best-time.txt");
             string iconPath = System.IO.Path.Combine(
                 _root, "LauncherUI", "Assets", "WinBridge.png");
-            _miniGame = new MiniGameWindow(scorePath, iconPath);
-            _miniGame.Closed += delegate
+            _minesweeperGame = new MinesweeperGameWindow(scorePath, iconPath);
+            _minesweeperGame.Closed += delegate
             {
-                _miniGame = null;
+                _minesweeperGame = null;
                 TryCloseAfterGameEnds();
             };
-            _miniGame.Show();
+            _minesweeperGame.Show();
         }
 
         private void OpenSnakeGame()
@@ -1957,8 +1957,8 @@ namespace WinBridgeRecovery
             _subheading.Text = message;
             _footerStatus.Text = message;
             AppendLog("[OK] " + message);
-            if (_miniGame != null)
-                _miniGame.NotifyLaunchComplete();
+            if (_minesweeperGame != null)
+                _minesweeperGame.NotifyLaunchComplete();
             if (_snakeGame != null)
                 _snakeGame.NotifyLaunchComplete();
 
@@ -1988,7 +1988,7 @@ namespace WinBridgeRecovery
 
         private bool IsGameActive()
         {
-            return _miniGame != null || _snakeGame != null || _gameSelector != null;
+            return _minesweeperGame != null || _snakeGame != null || _gameSelector != null;
         }
 
         private void TryCloseAfterGameEnds()
@@ -2074,10 +2074,10 @@ namespace WinBridgeRecovery
                 _stopRequested = true;
             }
             _processSession.RequestCleanup();
-            if (_miniGame != null)
+            if (_minesweeperGame != null)
             {
-                _miniGame.Close();
-                _miniGame = null;
+                _minesweeperGame.Close();
+                _minesweeperGame = null;
             }
             if (_snakeGame != null)
             {
@@ -3751,12 +3751,12 @@ namespace WinBridgeRecovery
 
     public sealed class GameSelectionWindow : Window
     {
-        private readonly Action _openBreakout;
+        private readonly Action _openMinesweeper;
         private readonly Action _openSnake;
 
-        public GameSelectionWindow(string iconPath, Action openBreakout, Action openSnake)
+        public GameSelectionWindow(string iconPath, Action openMinesweeper, Action openSnake)
         {
-            _openBreakout = openBreakout;
+            _openMinesweeper = openMinesweeper;
             _openSnake = openSnake;
 
             Title = "Mini Games";
@@ -3812,20 +3812,20 @@ namespace WinBridgeRecovery
             Grid.SetRow(snake, 1);
             content.Children.Add(snake);
 
-            Button breakout = GameChoice(
-                "\u6253\u7816\u5757",
-                "BREAKOUT",
-                "\u9F20\u6807\u63A7\u5236  \u00B7  \u51FB\u7834\u9713\u8679\u7816\u5899",
+            Button minesweeper = GameChoice(
+                "\u626B\u96F7",
+                "MINESWEEPER",
+                "\u5DE6\u952E\u7FFB\u5F00  \u00B7  \u53F3\u952E\u63D2\u65D7",
                 "#FF3EB5",
                 "#BE5CFF");
-            breakout.Click += delegate
+            minesweeper.Click += delegate
             {
                 Close();
-                _openBreakout();
+                _openMinesweeper();
             };
-            Grid.SetRow(breakout, 1);
-            Grid.SetColumn(breakout, 2);
-            content.Children.Add(breakout);
+            Grid.SetRow(minesweeper, 1);
+            Grid.SetColumn(minesweeper, 2);
+            content.Children.Add(minesweeper);
 
             Grid.SetRow(content, 1);
             root.Children.Add(content);
@@ -6818,16 +6818,32 @@ namespace WinBridgeRecovery
         {
             bool demo = false;
             bool diagnose = false;
+            bool minesweeperPreview = false;
             for (int i = 0; i < args.Length; i++)
             {
                 if (string.Equals(args[i], "--demo", StringComparison.OrdinalIgnoreCase))
                     demo = true;
                 if (string.Equals(args[i], "--diagnose", StringComparison.OrdinalIgnoreCase))
                     diagnose = true;
+                if (string.Equals(args[i], "--minesweeper-preview", StringComparison.OrdinalIgnoreCase))
+                    minesweeperPreview = true;
             }
 
             string exe = Process.GetCurrentProcess().MainModule.FileName;
             string root = Directory.GetParent(System.IO.Path.GetDirectoryName(exe)).FullName;
+            if (minesweeperPreview)
+            {
+                string statePath = System.IO.Path.Combine(
+                    root, "LauncherUI", "State", "neon-minesweeper-best-time.txt");
+                string previewIcon = System.IO.Path.Combine(
+                    root, "LauncherUI", "Assets", "WinBridge.png");
+                Application previewApp = new Application
+                {
+                    ShutdownMode = ShutdownMode.OnLastWindowClose
+                };
+                previewApp.Run(new MinesweeperGameWindow(statePath, previewIcon));
+                return;
+            }
             string script = System.IO.Path.Combine(root, "Invoke-WinBridge-Configured.ps1");
             if (!File.Exists(script))
             {
