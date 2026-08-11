@@ -22,6 +22,7 @@ namespace WinBridgeRecovery
         private const string InstallerName = "WinBridge-Recovery-Setup.exe";
         private const int InstallerDownloadTimeout = 60000;
         private readonly string _root;
+        private readonly LauncherLanguageSettings _language;
         private readonly TextBlock _status = new TextBlock();
         private readonly ProgressBar _progress = new ProgressBar();
         private readonly Button _action = new Button();
@@ -30,7 +31,8 @@ namespace WinBridgeRecovery
         public UpdateWindow(string root, string iconPath)
         {
             _root = root;
-            Title = "WinBridge Recovery Update";
+            _language = LauncherLanguageSettings.Load(root);
+            Title = L("WinBridge Recovery 更新", "WinBridge Recovery Update", "Mise à jour de WinBridge Recovery", "Actualización de WinBridge Recovery", "Обновление WinBridge Recovery", "تحديث WinBridge Recovery");
             Width = 520;
             Height = 300;
             WindowStartupLocation = WindowStartupLocation.CenterOwner;
@@ -49,7 +51,7 @@ namespace WinBridgeRecovery
             StackPanel panel = new StackPanel();
             panel.Children.Add(new TextBlock { Text = "WinBridge Recovery", Foreground = Brushes.White, FontSize = 20, FontWeight = FontWeights.SemiBold });
             panel.Children.Add(new TextBlock { Text = "v" + CurrentVersion, Foreground = Brush("#FF8B98A3"), Margin = new Thickness(0, 4, 0, 20) });
-            _status.Text = "Checking the official release...";
+            _status.Text = L("正在检查正式发布版本...", "Checking the official release...", "Recherche de la version officielle...", "Buscando la versión oficial...", "Проверка официального выпуска...", "جار التحقق من الإصدار الرسمي...");
             _status.Foreground = Brush("#FFDDE4E9");
             _status.TextWrapping = TextWrapping.Wrap;
             _status.MinHeight = 48;
@@ -60,9 +62,9 @@ namespace WinBridgeRecovery
             _progress.Maximum = 100;
             panel.Children.Add(_progress);
             StackPanel actions = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right };
-            Button close = Button("Close");
+            Button close = Button(L("关闭", "Close", "Fermer", "Cerrar", "Закрыть", "إغلاق"));
             close.Click += delegate { Close(); };
-            _action.Content = "Checking...";
+            _action.Content = L("检查中...", "Checking...", "Vérification...", "Comprobando...", "Проверка...", "جار التحقق...");
             _action.Width = 150;
             _action.Height = 34;
             _action.Margin = new Thickness(10, 0, 0, 0);
@@ -84,30 +86,30 @@ namespace WinBridgeRecovery
                 Version latest = ParseVersion(_release.Version);
                 if (latest <= current)
                 {
-                    _status.Text = "You already have the latest version.";
-                    _action.Content = "Up to date";
+                    _status.Text = L("当前已经是最新版本。", "You already have the latest version.", "Vous disposez déjà de la dernière version.", "Ya tiene la última versión.", "У вас уже последняя версия.", "لديك أحدث إصدار بالفعل.");
+                    _action.Content = L("已是最新", "Up to date", "À jour", "Actualizado", "Актуально", "محدّث");
                     return;
                 }
-                _status.Text = "Version " + latest + " is available. The installer will be verified before it runs.";
-                _action.Content = "Download and install";
+                _status.Text = L("发现版本 " + latest + "。安装程序将在运行前完成校验。", "Version " + latest + " is available. The installer will be verified before it runs.", "La version " + latest + " est disponible. L'installateur sera vérifié avant exécution.", "La versión " + latest + " está disponible. El instalador se verificará antes de ejecutarse.", "Доступна версия " + latest + ". Установщик будет проверен перед запуском.", "الإصدار " + latest + " متاح. سيتم التحقق من برنامج التثبيت قبل تشغيله.");
+                _action.Content = L("下载并安装", "Download and install", "Télécharger et installer", "Descargar e instalar", "Скачать и установить", "تنزيل وتثبيت");
                 _action.IsEnabled = true;
             }
             catch (Exception ex)
             {
-                _status.Text = "Update check is temporarily unavailable: " + ex.Message;
-                _action.Content = "Unavailable";
+                _status.Text = L("暂时无法检查更新：", "Update check is temporarily unavailable: ", "La vérification est temporairement indisponible : ", "La comprobación no está disponible temporalmente: ", "Проверка обновлений временно недоступна: ", "التحقق من التحديث غير متاح مؤقتا: ") + ex.Message;
+                _action.Content = L("不可用", "Unavailable", "Indisponible", "No disponible", "Недоступно", "غير متاح");
             }
         }
 
         private async void DownloadAndInstall()
         {
             _action.IsEnabled = false;
-            _status.Text = "Downloading the verified installer...";
+            _status.Text = L("正在下载并校验安装程序...", "Downloading the verified installer...", "Téléchargement de l'installateur vérifié...", "Descargando el instalador verificado...", "Загрузка проверенного установщика...", "جار تنزيل برنامج التثبيت المتحقق منه...");
             try
             {
                 string path = await Task.Factory.StartNew<string>(delegate { return DownloadInstaller(_release); });
                 _progress.Value = 100;
-                _status.Text = "Download verified. The installer will open after this launcher closes.";
+                _status.Text = L("下载与校验完成。启动器关闭后将打开安装程序。", "Download verified. The installer will open after this launcher closes.", "Téléchargement vérifié. L'installateur s'ouvrira après la fermeture.", "Descarga verificada. El instalador se abrirá al cerrar el iniciador.", "Загрузка проверена. Установщик откроется после закрытия лаунчера.", "اكتمل التنزيل والتحقق. سيفتح برنامج التثبيت بعد إغلاق المشغل.");
                 string helper = Path.Combine(_root, "LauncherUI", "WinBridgeUpdateBootstrapper.exe");
                 if (!File.Exists(helper)) throw new FileNotFoundException("Update helper is missing.", helper);
                 Process.Start(new ProcessStartInfo
@@ -120,8 +122,8 @@ namespace WinBridgeRecovery
             }
             catch (Exception ex)
             {
-                _status.Text = "Update failed safely: " + ex.Message;
-                _action.Content = "Retry";
+                _status.Text = L("更新已安全停止：", "Update failed safely: ", "La mise à jour s'est arrêtée en sécurité : ", "La actualización se detuvo de forma segura: ", "Обновление безопасно остановлено: ", "تم إيقاف التحديث بأمان: ") + ex.Message;
+                _action.Content = L("重试", "Retry", "Réessayer", "Reintentar", "Повторить", "إعادة المحاولة");
                 _action.IsEnabled = true;
             }
         }
@@ -248,6 +250,11 @@ namespace WinBridgeRecovery
         private static Button Button(string text)
         {
             return new Button { Content = text, Width = 90, Height = 34, Background = Brush("#FF1B2228"), Foreground = Brushes.White, BorderBrush = Brush("#FF45505A") };
+        }
+
+        private string L(string zh, string en, string fr, string es, string ru, string ar)
+        {
+            return LauncherLocale.Pick(_language == null ? "en" : _language.Code, zh, en, fr, es, ru, ar);
         }
 
         private static BitmapImage LoadBitmap(string path)
