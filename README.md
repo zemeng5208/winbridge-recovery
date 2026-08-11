@@ -6,6 +6,14 @@ WinBridge Recovery detects and repairs bundled marketplace, plugin cache, `lates
 
 > Independent, non-commercial student project. Not affiliated with, sponsored by, or endorsed by OpenAI. Third-party names are used only to identify compatibility. No third-party logos or official application/plugin files are redistributed.
 
+## Project history
+
+WinBridge Recovery is the current maintained implementation of an earlier public, script-based project: **[Codex Desktop Plugin Repair Safety Kit](https://github.com/zemeng5208/codex-desktop-plugin-repair-safety-kit)**.
+
+The earlier Safety Kit focused on conservative health checks and targeted `node_repl` repair for Windows Codex Desktop plugin-runtime failures. WinBridge Recovery continues the same recovery problem space at a broader engineering level, adding version-aware package detection, bundled marketplace/cache and `latest` reconciliation, runtime/registration recovery, verified backups and rollback, a GUI launcher, installer, portable distribution, and compatibility work for newer Desktop package layouts.
+
+The predecessor repository is intentionally preserved rather than merged or rewritten so its original Git history remains available as the earlier public stage of the project. Active development and releases are maintained here.
+
 ## Features
 
 - Version-aware detection of the locally installed Codex Desktop package.
