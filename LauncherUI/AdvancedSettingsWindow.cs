@@ -19,6 +19,8 @@ namespace WinBridgeRecovery
         private readonly LauncherGeneralSettings _general;
         private readonly LauncherThemeSettings _theme;
         private readonly SocialFeedSettings _feed;
+        private readonly LauncherLanguageSettings _language;
+        private readonly bool _feedAvailable;
         private readonly Action<LauncherGeneralSettings> _applyGeneral;
         private readonly Action<LauncherThemeSettings> _applyTheme;
         private readonly Action _openGames;
@@ -46,8 +48,11 @@ namespace WinBridgeRecovery
             _openFeed = openFeed;
             _feedPath = Path.Combine(root, "LauncherUI", "State", "social-feed-settings.ini");
             _feed = SocialFeedSettings.Load(_feedPath);
+            _language = LauncherLanguageSettings.Load(root);
+            _feedAvailable = SocialFeedWindow.ProbeAvailability();
+            if (!_feedAvailable && !File.Exists(_feedPath)) _feed.Enabled = false;
 
-            Title = "\u8BBE\u7F6E";
+            Title = L("\u8BBE\u7F6E", "Settings", "Param\u00E8tres", "Configuraci\u00F3n", "\u041D\u0430\u0441\u0442\u0440\u043E\u0439\u043A\u0438", "\u0627\u0644\u0625\u0639\u062F\u0627\u062F\u0627\u062A");
             Width = 430;
             Height = 760;
             MinWidth = 400;
@@ -124,7 +129,7 @@ namespace WinBridgeRecovery
             }
             brand.Children.Add(new TextBlock
             {
-                Text = "\u8BBE\u7F6E",
+                Text = Title,
                 Foreground = Brush("#FFF4F6F8"),
                 FontSize = 14,
                 FontWeight = FontWeights.SemiBold,
@@ -147,7 +152,7 @@ namespace WinBridgeRecovery
         {
             DisclosureSection general = Section("\u2637", "\u5E38\u89C4",
                 (_general.AutoCloseAfterSuccess ? "\u81EA\u52A8\u5173\u95ED \u5F00" : "\u81EA\u52A8\u5173\u95ED \u5173") + " \u00B7 \u7B80\u4F53\u4E2D\u6587", true);
-            general.Body.Children.Add(ReadOnlyRow("\u754C\u9762\u8BED\u8A00", "\u7B80\u4F53\u4E2D\u6587", "\u540E\u7EED\u7248\u672C\u53EF\u63A5\u5165\u66F4\u591A\u8BED\u8A00"));
+            general.Body.Children.Add(LanguageRow());
             general.Body.Children.Add(ToggleRow(
                 "\u5B8C\u6210\u540E\u81EA\u52A8\u5173\u95ED",
                 "\u65E0\u5176\u4ED6\u4EA4\u4E92\u4EFB\u52A1\u65F6\u91CA\u653E\u542F\u52A8\u5668\u8D44\u6E90",
@@ -209,26 +214,31 @@ namespace WinBridgeRecovery
             storage.Body.Children.Add(CommandRow("\u6253\u5F00 Logs \u76EE\u5F55", delegate { OpenPath(Path.Combine(_root, "Logs")); }));
             _sections.Children.Add(storage.Root);
 
-            int sourceCount = (_feed.IncludeTibo ? 1 : 0) + (_feed.IncludeOpenAI ? 1 : 0) + (_feed.IncludeChatGPT ? 1 : 0);
-            DisclosureSection feed = Section("\u2601", "\u52A8\u6001",
-                sourceCount.ToString(CultureInfo.InvariantCulture) + " \u4E2A\u8D26\u53F7 \u00B7 " +
-                _feed.MaximumPosts.ToString(CultureInfo.InvariantCulture) + " \u6761", false);
-            feed.Body.Children.Add(ToggleRow("Tibo", "@thsottiaux", _feed.IncludeTibo,
-                delegate(bool value) { _feed.IncludeTibo = value; SaveFeed(); }));
-            feed.Body.Children.Add(ToggleRow("OpenAI", "@OpenAI", _feed.IncludeOpenAI,
-                delegate(bool value) { _feed.IncludeOpenAI = value; SaveFeed(); }));
-            feed.Body.Children.Add(ToggleRow("ChatGPT", "@ChatGPT", _feed.IncludeChatGPT,
-                delegate(bool value) { _feed.IncludeChatGPT = value; SaveFeed(); }));
-            feed.Body.Children.Add(ChoiceRow("\u663E\u793A\u52A8\u6001", new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" },
-                _feed.MaximumPosts.ToString(CultureInfo.InvariantCulture),
-                delegate(string value) { int number; if (int.TryParse(value, out number)) { _feed.MaximumPosts = number; SaveFeed(); } }));
-            feed.Body.Children.Add(ToggleRow(
-                "Jina Reader \u540E\u5907",
-                "RSS \u5931\u6548\u65F6\u964D\u7EA7\u8BFB\u53D6\u516C\u5F00\u9875\u9762",
-                _feed.UseJinaFallback,
-                delegate(bool value) { _feed.UseJinaFallback = value; SaveFeed(); }));
-            feed.Body.Children.Add(CommandRow("\u6253\u5F00\u52A8\u6001", _openFeed));
-            _sections.Children.Add(feed.Root);
+            if (_feedAvailable)
+            {
+                int sourceCount = (_feed.IncludeTibo ? 1 : 0) + (_feed.IncludeOpenAI ? 1 : 0) + (_feed.IncludeChatGPT ? 1 : 0);
+                DisclosureSection feed = Section("\u2601", "\u52A8\u6001",
+                    sourceCount.ToString(CultureInfo.InvariantCulture) + " \u4E2A\u8D26\u53F7 \u00B7 " +
+                    _feed.MaximumPosts.ToString(CultureInfo.InvariantCulture) + " \u6761", false);
+                feed.Body.Children.Add(ToggleRow("\u5F00\u542F\u52A8\u6001\u529F\u80FD", "\u5173\u95ED\u540E\u4E0D\u663E\u793A\u516C\u5F00\u52A8\u6001\u7A97\u53E3", _feed.Enabled,
+                    delegate(bool value) { _feed.Enabled = value; SaveFeed(); }));
+                feed.Body.Children.Add(ToggleRow("Tibo", "@thsottiaux", _feed.IncludeTibo,
+                    delegate(bool value) { _feed.IncludeTibo = value; SaveFeed(); }));
+                feed.Body.Children.Add(ToggleRow("OpenAI", "@OpenAI", _feed.IncludeOpenAI,
+                    delegate(bool value) { _feed.IncludeOpenAI = value; SaveFeed(); }));
+                feed.Body.Children.Add(ToggleRow("ChatGPT", "@ChatGPT", _feed.IncludeChatGPT,
+                    delegate(bool value) { _feed.IncludeChatGPT = value; SaveFeed(); }));
+                feed.Body.Children.Add(ChoiceRow("\u663E\u793A\u52A8\u6001", new[] { "1", "2", "3", "4", "5", "6", "7", "8", "9", "10" },
+                    _feed.MaximumPosts.ToString(CultureInfo.InvariantCulture),
+                    delegate(string value) { int number; if (int.TryParse(value, out number)) { _feed.MaximumPosts = number; SaveFeed(); } }));
+                feed.Body.Children.Add(ToggleRow(
+                    "Jina Reader \u540E\u5907",
+                    "RSS \u5931\u6548\u65F6\u964D\u7EA7\u8BFB\u53D6\u516C\u5F00\u9875\u9762",
+                    _feed.UseJinaFallback,
+                    delegate(bool value) { _feed.UseJinaFallback = value; SaveFeed(); }));
+                feed.Body.Children.Add(CommandRow("\u6253\u5F00\u52A8\u6001", delegate { if (_feed.Enabled) _openFeed(); }));
+                _sections.Children.Add(feed.Root);
+            }
 
             DisclosureSection games = Section("\u25C8", "\u5C0F\u6E38\u620F", "\u8D2A\u5403\u86C7 \u00B7 \u626B\u96F7", false);
             games.Body.Children.Add(ReadOnlyRow("\u5DF2\u5B89\u88C5", "\u8D2A\u5403\u86C7\u3001\u626B\u96F7", "\u6E38\u620F\u8FD0\u884C\u65F6\u53EF\u4FDD\u6301\u542F\u52A8\u5668\u4E0D\u81EA\u52A8\u5173\u95ED"));
@@ -443,6 +453,42 @@ namespace WinBridgeRecovery
             Grid.SetColumn(chip, 1);
             row.Children.Add(chip);
             return row;
+        }
+
+        private UIElement LanguageRow()
+        {
+            Grid row = BaseRow();
+            row.Children.Add(RowCopy(
+                L("\u754C\u9762\u4E0E\u7FFB\u8BD1\u8BED\u8A00", "Interface and translation language", "Langue de l'interface et de traduction", "Idioma de interfaz y traducci\u00F3n", "\u042F\u0437\u044B\u043A \u0438\u043D\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0430 \u0438 \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0430", "\u0644\u063A\u0629 \u0627\u0644\u0648\u0627\u062C\u0647\u0629 \u0648\u0627\u0644\u062A\u0631\u062C\u0645\u0629"),
+                L("\u9996\u6B21\u542F\u52A8\u8DDF\u968F Windows\uFF0C\u53EF\u624B\u52A8\u66F4\u6539", "Detected from Windows on first run", "D\u00E9tect\u00E9 depuis Windows au premier lancement", "Detectado desde Windows en el primer inicio", "\u041F\u0440\u0438 \u043F\u0435\u0440\u0432\u043E\u043C \u0437\u0430\u043F\u0443\u0441\u043A\u0435 \u0431\u0435\u0440\u0451\u0442\u0441\u044F \u0438\u0437 Windows", "\u064A\u062A\u0645 \u0627\u0643\u062A\u0634\u0627\u0641\u0647\u0627 \u0645\u0646 Windows \u0639\u0646\u062F \u0627\u0644\u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u0623\u0648\u0644")));
+            ComboBox combo = new ComboBox
+            {
+                Width = 112,
+                Height = 28,
+                Background = Brush("#FF1D2228"),
+                Foreground = Brush("#FFF0F3F5"),
+                BorderBrush = Brush("#FF48515A"),
+                FontSize = 10
+            };
+            string[] codes = { "zh", "en", "fr", "es", "ru", "ar" };
+            string[] names = { "\u4E2D\u6587", "English", "Fran\u00E7ais", "Espa\u00F1ol", "\u0420\u0443\u0441\u0441\u043A\u0438\u0439", "\u0627\u0644\u0639\u0631\u0628\u064A\u0629" };
+            for (int i = 0; i < names.Length; i++) combo.Items.Add(names[i]);
+            int selected = Array.IndexOf(codes, _language.Code);
+            combo.SelectedIndex = selected < 0 ? 1 : selected;
+            combo.SelectionChanged += delegate
+            {
+                if (combo.SelectedIndex < 0) return;
+                _language.Code = codes[combo.SelectedIndex];
+                _language.Save(_root);
+            };
+            Grid.SetColumn(combo, 1);
+            row.Children.Add(combo);
+            return row;
+        }
+
+        private string L(string zh, string en, string fr, string es, string ru, string ar)
+        {
+            return LauncherLocale.Pick(_language.Code, zh, en, fr, es, ru, ar);
         }
 
         private UIElement ChoiceRow(string title, string[] values, string selected, Action<string> changed)

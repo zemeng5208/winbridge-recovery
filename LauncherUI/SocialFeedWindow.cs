@@ -21,6 +21,7 @@ namespace WinBridgeRecovery
 {
     public sealed class SocialFeedSettings
     {
+        public bool Enabled = true;
         public bool IncludeTibo = true;
         public bool IncludeOpenAI = true;
         public bool IncludeChatGPT = true;
@@ -42,7 +43,8 @@ namespace WinBridgeRecovery
                     string value = pair[1].Trim();
                     bool flag;
                     int number;
-                    if (key == "include_tibo" && bool.TryParse(value, out flag)) settings.IncludeTibo = flag;
+                    if (key == "enabled" && bool.TryParse(value, out flag)) settings.Enabled = flag;
+                    else if (key == "include_tibo" && bool.TryParse(value, out flag)) settings.IncludeTibo = flag;
                     else if (key == "include_openai" && bool.TryParse(value, out flag)) settings.IncludeOpenAI = flag;
                     else if (key == "include_chatgpt" && bool.TryParse(value, out flag)) settings.IncludeChatGPT = flag;
                     else if (key == "maximum_posts" && int.TryParse(value, out number)) settings.MaximumPosts = Math.Max(1, Math.Min(10, number));
@@ -60,6 +62,7 @@ namespace WinBridgeRecovery
             if (!Directory.Exists(directory)) Directory.CreateDirectory(directory);
             File.WriteAllLines(path, new[]
             {
+                "enabled=" + Enabled.ToString(CultureInfo.InvariantCulture),
                 "include_tibo=" + IncludeTibo.ToString(CultureInfo.InvariantCulture),
                 "include_openai=" + IncludeOpenAI.ToString(CultureInfo.InvariantCulture),
                 "include_chatgpt=" + IncludeChatGPT.ToString(CultureInfo.InvariantCulture),
@@ -79,6 +82,7 @@ namespace WinBridgeRecovery
         private readonly TextBlock _status = new TextBlock();
         private readonly Button _refresh = new Button();
         private readonly JavaScriptSerializer _serializer = new JavaScriptSerializer();
+        private readonly string _languageCode;
         private List<SocialFeedPost> _visiblePosts = new List<SocialFeedPost>();
 
         public SocialFeedWindow(string iconPath, string stateDirectory)
@@ -86,7 +90,9 @@ namespace WinBridgeRecovery
             _iconPath = iconPath;
             _cachePath = Path.Combine(stateDirectory, "social-feed-cache.json");
             _settings = SocialFeedSettings.Load(Path.Combine(stateDirectory, "social-feed-settings.ini"));
-            Title = "\u770B\u770B\u4ED6";
+            string launcherRoot = Directory.GetParent(Directory.GetParent(stateDirectory).FullName).FullName;
+            _languageCode = LauncherLanguageSettings.Load(launcherRoot).Code;
+            Title = LauncherLocale.Pick(_languageCode, "\u770B\u770B\u4ED6", "Social feed", "Actualit\u00E9s", "Novedades", "\u041D\u043E\u0432\u043E\u0441\u0442\u0438", "\u0622\u062E\u0631 \u0627\u0644\u0645\u0633\u062A\u062C\u062F\u0627\u062A");
             Width = 650;
             Height = 710;
             MinWidth = 540;
@@ -547,32 +553,33 @@ namespace WinBridgeRecovery
         private void TranslatePost(string text, Button button, TextBlock output)
         {
             button.IsEnabled = false;
-            button.Content = "\u7FFB\u8BD1\u4E2D\u2026";
+            button.Content = LauncherLocale.Pick(_languageCode, "\u7FFB\u8BD1\u4E2D\u2026", "Translating...", "Traduction...", "Traduciendo...", "\u041F\u0435\u0440\u0435\u0432\u043E\u0434...", "\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u0631\u062C\u0645\u0629...");
             output.Visibility = Visibility.Visible;
-            output.Text = "\u6B63\u5728\u8BFB\u53D6\u4E2D\u6587\u7FFB\u8BD1\u2026";
-            Task.Factory.StartNew(delegate { return TranslateToChinese(text); })
+            output.Text = button.Content.ToString();
+            Task.Factory.StartNew(delegate { return TranslateText(text, LauncherLocale.TranslationCode(_languageCode)); })
                 .ContinueWith(delegate(Task<string> task)
                 {
                     Dispatcher.BeginInvoke(new Action(delegate
                     {
                         if (task.IsFaulted || task.IsCanceled || string.IsNullOrWhiteSpace(task.Result))
                         {
-                            output.Text = "\u7FFB\u8BD1\u670D\u52A1\u6682\u65F6\u4E0D\u53EF\u7528\u3002";
-                            button.Content = "\u91CD\u8BD5\u4E2D\u6587\u7FFB\u8BD1";
+                            output.Text = LauncherLocale.Pick(_languageCode, "\u7FFB\u8BD1\u670D\u52A1\u6682\u65F6\u4E0D\u53EF\u7528\u3002", "Translation is temporarily unavailable.", "Traduction temporairement indisponible.", "La traducci\u00F3n no est\u00E1 disponible.", "\u041F\u0435\u0440\u0435\u0432\u043E\u0434 \u0432\u0440\u0435\u043C\u0435\u043D\u043D\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u0435\u043D.", "\u0627\u0644\u062A\u0631\u062C\u0645\u0629 \u063A\u064A\u0631 \u0645\u062A\u0627\u062D\u0629 \u0645\u0624\u0642\u062A\u0627\u064B.");
+                            button.Content = LauncherLocale.Pick(_languageCode, "\u91CD\u8BD5\u7FFB\u8BD1", "Retry", "R\u00E9essayer", "Reintentar", "\u041F\u043E\u0432\u0442\u043E\u0440\u0438\u0442\u044C", "\u0625\u0639\u0627\u062F\u0629 \u0627\u0644\u0645\u062D\u0627\u0648\u0644\u0629");
                             button.IsEnabled = true;
                         }
                         else
                         {
-                            output.Text = "\u4E2D\u6587\u7FFB\u8BD1\n" + task.Result.Trim();
-                            button.Content = "\u5DF2\u7FFB\u8BD1";
+                            output.Text = task.Result.Trim();
+                            button.Content = LauncherLocale.Pick(_languageCode, "\u5DF2\u7FFB\u8BD1", "Translated", "Traduit", "Traducido", "\u041F\u0435\u0440\u0435\u0432\u0435\u0434\u0435\u043D\u043E", "\u062A\u0645\u062A \u0627\u0644\u062A\u0631\u062C\u0645\u0629");
                         }
                     }));
                 });
         }
 
-        private static string TranslateToChinese(string text)
+        private static string TranslateText(string text, string targetLanguage)
         {
-            string url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=zh-CN&dt=t&q=" +
+            string url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" +
+                Uri.EscapeDataString(targetLanguage) + "&dt=t&q=" +
                 Uri.EscapeDataString((text ?? string.Empty).Substring(0, Math.Min(1800, (text ?? string.Empty).Length)));
             string json = Download(url, 15000);
             object[] root = new JavaScriptSerializer().DeserializeObject(json) as object[];
@@ -586,6 +593,30 @@ namespace WinBridgeRecovery
                     output.Append(Convert.ToString(segment[0], CultureInfo.InvariantCulture));
             }
             return output.ToString();
+        }
+
+        public static bool ProbeAvailability()
+        {
+            string[] urls =
+            {
+                "https://rss.xxu.do/twitter/user/OpenAI",
+                "https://r.jina.ai/https://x.com/OpenAI"
+            };
+            foreach (string url in urls)
+            {
+                try
+                {
+                    HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+                    request.Method = "GET";
+                    request.Timeout = 2200;
+                    request.ReadWriteTimeout = 2200;
+                    request.UserAgent = "WinBridge-Recovery/3.1";
+                    using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+                        if ((int)response.StatusCode >= 200 && (int)response.StatusCode < 400) return true;
+                }
+                catch { }
+            }
+            return false;
         }
 
         private Button LinkButton(string text)
