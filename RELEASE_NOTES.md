@@ -30,3 +30,9 @@ Independent Windows recovery launcher for GPT/Codex Desktop Browser, Chrome, and
 v3 replaces stale v1/v2 resource mirrors only when validation fails. It does not bundle official application or plugin files; recovery content is derived from the official package installed on the target computer.
 
 The installer uses a self-signed testing certificate. Windows may report an untrusted certificate chain. Verify the published SHA-256 before running it.
+
+## Download verification
+
+```text
+SHA256  8F6158F88D501B75B9B252493CFF5B7086111A6BBE968172F3C172DACDF0A560  WinBridge-Recovery-Setup.exe
+```
