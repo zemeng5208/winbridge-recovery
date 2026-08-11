@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest a practical improvement to WinBridge Recovery
+title: "[Feature] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Feature requests are welcome. Please focus on recovery, diagnostics, compatibility, safety, packaging, or user experience for the Windows Codex Desktop workflow.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or use case
+      description: What real problem would this feature solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed improvement
+      description: Describe the behavior you would like to see.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Optional. Describe workarounds or alternatives you have tried.
+    validations:
+      required: false
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      options:
+        - label: This request does not require redistributing official OpenAI/Codex application or plugin payloads.
+          required: true
+        - label: This request does not ask WinBridge Recovery to bypass enterprise, browser, or account security controls.
+          required: true
