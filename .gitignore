@@ -1,0 +1,34 @@
+# Build outputs
+*.exe
+*.dll
+*.pdb
+*.runtime.ps1
+
+# Runtime state
+Logs/
+R/
+State/
+Config/
+Data/
+Rollback/
+Screenshots/
+
+# Installer staging and archives
+Installer/WinBridgeUninstall.exe
+*.zip
+*.7z
+*.msix
+*.msixbundle
+
+# Private signing material
+*.pfx
+*.p12
+*.key
+*.pem
+
+# Local tooling
+.vs/
+.vscode/
+.idea/
+PublishAudit/
+Publish/
