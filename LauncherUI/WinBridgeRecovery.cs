@@ -300,7 +300,7 @@ namespace WinBridgeRecovery
         private SnakeGameWindow _snakeGame;
         private GameSelectionWindow _gameSelector;
         private ThemeSettingsWindow _themeWindow;
-        private LauncherSettingsWindow _settingsWindow;
+        private AdvancedSettingsWindow _settingsWindow;
         private GeneralSettingsWindow _generalWindow;
         private SocialFeedWindow _socialFeedWindow;
         private LauncherThemeSettings _themeSettings;
@@ -1163,31 +1163,33 @@ namespace WinBridgeRecovery
             }
             string iconPath = System.IO.Path.Combine(
                 _root, "LauncherUI", "Assets", "WinBridge.png");
-            string gamepadPath = System.IO.Path.Combine(
-                _root, "LauncherUI", "Assets", "Gamepad-Color.png");
-            _settingsWindow = new LauncherSettingsWindow(
+            _settingsWindow = new AdvancedSettingsWindow(
+                _root,
                 iconPath,
-                gamepadPath,
-                delegate
+                _generalSettings.Clone(),
+                _themeSettings.Clone(),
+                delegate(LauncherGeneralSettings settings)
                 {
-                    if (_settingsWindow != null) _settingsWindow.Close();
-                    OpenGeneralSettings();
+                    _generalSettings = settings.Clone();
+                    _generalSettings.Save(_root);
+                    RunLogMaintenance(false);
                 },
-                delegate
+                delegate(LauncherThemeSettings settings)
                 {
-                    if (_settingsWindow != null) _settingsWindow.Close();
-                    OpenThemeSettings();
+                    _themeSettings = settings.Clone();
+                    _themeSettings.Save(_root);
+                    ApplyThemePalette();
+                    UiWindowReveal.ApplyBackdrop(
+                        this,
+                        string.Equals(_themeSettings.Theme, "glass", StringComparison.OrdinalIgnoreCase));
+                    if (_particles != null)
+                    {
+                        if (_themeSettings.ReduceMotion) _particles.Stop();
+                        else _particles.Start();
+                    }
                 },
-                delegate
-                {
-                    if (_settingsWindow != null) _settingsWindow.Close();
-                    OpenGameSelector();
-                },
-                delegate
-                {
-                    if (_settingsWindow != null) _settingsWindow.Close();
-                    OpenSocialFeed();
-                });
+                OpenGameSelector,
+                OpenSocialFeed);
             _settingsWindow.Owner = this;
             _settingsWindow.Closed += delegate { _settingsWindow = null; };
             _settingsWindow.Show();
@@ -6877,6 +6879,7 @@ namespace WinBridgeRecovery
             bool demo = false;
             bool diagnose = false;
             bool minesweeperPreview = false;
+            bool settingsPreview = false;
             for (int i = 0; i < args.Length; i++)
             {
                 if (string.Equals(args[i], "--demo", StringComparison.OrdinalIgnoreCase))
@@ -6885,10 +6888,28 @@ namespace WinBridgeRecovery
                     diagnose = true;
                 if (string.Equals(args[i], "--minesweeper-preview", StringComparison.OrdinalIgnoreCase))
                     minesweeperPreview = true;
+                if (string.Equals(args[i], "--settings-preview", StringComparison.OrdinalIgnoreCase))
+                    settingsPreview = true;
             }
 
             string exe = Process.GetCurrentProcess().MainModule.FileName;
             string root = Directory.GetParent(System.IO.Path.GetDirectoryName(exe)).FullName;
+            if (settingsPreview)
+            {
+                string previewIcon = System.IO.Path.Combine(root, "LauncherUI", "Assets", "WinBridge.png");
+                Application previewApp = new Application { ShutdownMode = ShutdownMode.OnLastWindowClose };
+                AdvancedSettingsWindow preview = new AdvancedSettingsWindow(
+                    root,
+                    previewIcon,
+                    LauncherGeneralSettings.Load(root),
+                    LauncherThemeSettings.Load(root),
+                    delegate(LauncherGeneralSettings settings) { },
+                    delegate(LauncherThemeSettings settings) { },
+                    delegate { },
+                    delegate { });
+                previewApp.Run(preview);
+                return;
+            }
             if (minesweeperPreview)
             {
                 string statePath = System.IO.Path.Combine(

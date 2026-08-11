@@ -8,6 +8,7 @@ $root = $PSScriptRoot
 $source = Join-Path $root 'WinBridgeRecovery.cs'
 $minesweeperSource = Join-Path $root 'MinesweeperGameWindow.cs'
 $socialFeedSource = Join-Path $root 'SocialFeedWindow.cs'
+$advancedSettingsSource = Join-Path $root 'AdvancedSettingsWindow.cs'
 $output = Join-Path $root 'WinBridgeRecovery.exe'
 $guardianSource = Join-Path $root 'WinBridgeGuardian.cs'
 $guardianOutput = Join-Path $root 'WinBridgeGuardian.exe'
@@ -25,6 +26,9 @@ try {
   }
   if (-not (Test-Path -LiteralPath $socialFeedSource -PathType Leaf)) {
     throw "Source file not found: $socialFeedSource"
+  }
+  if (-not (Test-Path -LiteralPath $advancedSettingsSource -PathType Leaf)) {
+    throw "Source file not found: $advancedSettingsSource"
   }
   if (-not (Test-Path -LiteralPath $icon -PathType Leaf)) {
     throw "Icon file not found: $icon"
@@ -65,7 +69,7 @@ try {
   try {
     $result = $provider.CompileAssemblyFromFile(
       $compilerParameters,
-      [string[]]@($source, $minesweeperSource, $socialFeedSource))
+      [string[]]@($source, $minesweeperSource, $socialFeedSource, $advancedSettingsSource))
   } finally {
     $provider.Dispose()
   }
