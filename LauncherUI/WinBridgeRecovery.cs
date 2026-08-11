@@ -305,6 +305,7 @@ namespace WinBridgeRecovery
         private SocialFeedWindow _socialFeedWindow;
         private LauncherThemeSettings _themeSettings;
         private LauncherGeneralSettings _generalSettings;
+        private LauncherLanguageSettings _languageSettings;
         private bool _closingAfterSuccess;
         private bool _launchCompleted;
         private bool _stopRequested;
@@ -346,6 +347,7 @@ namespace WinBridgeRecovery
             _processSession = LauncherProcessSession.Start(_root);
             _themeSettings = LauncherThemeSettings.Load(_root);
             _generalSettings = LauncherGeneralSettings.Load(_root);
+            _languageSettings = LauncherLanguageSettings.Load(_root);
             ApplyThemePalette();
 
             Title = "WinBridge Recovery";
@@ -481,11 +483,11 @@ namespace WinBridgeRecovery
             };
             _stagePanel = new StackPanel { Margin = new Thickness(0, 18, 0, 0) };
             rail.Child = _stagePanel;
-            AddStage("1", "系统预检");
-            AddStage("2", "插件完整性");
-            AddStage("3", "运行时");
-            AddStage("4", "插件注册");
-            AddStage("5", "启动应用");
+            AddStage("1", L("系统预检", "System check", "Vérification système", "Comprobación del sistema", "Проверка системы", "فحص النظام"));
+            AddStage("2", L("插件完整性", "Plugin integrity", "Intégrité des extensions", "Integridad de complementos", "Целостность плагинов", "سلامة المكونات"));
+            AddStage("3", L("运行时", "Runtime", "Environnement", "Entorno de ejecución", "Среда выполнения", "بيئة التشغيل"));
+            AddStage("4", L("插件注册", "Plugin registration", "Enregistrement", "Registro de complementos", "Регистрация плагинов", "تسجيل المكونات"));
+            AddStage("5", L("启动应用", "Launch app", "Lancer l'application", "Iniciar aplicación", "Запуск приложения", "تشغيل التطبيق"));
             body.Children.Add(rail);
 
             Grid main = new Grid { Margin = new Thickness(26, 20, 26, 18) };
@@ -523,14 +525,16 @@ namespace WinBridgeRecovery
             StackPanel copy = new StackPanel();
             _heading = new TextBlock
             {
-                Text = _diagnoseMode ? "正在执行只读诊断" : "准备 ChatGPT Desktop",
+                Text = _diagnoseMode
+                    ? L("正在执行只读诊断", "Running read-only diagnostics", "Diagnostic en lecture seule", "Diagnóstico de solo lectura", "Диагностика только для чтения", "تشخيص للقراءة فقط")
+                    : L("准备 ChatGPT Desktop", "Preparing ChatGPT Desktop", "Préparation de ChatGPT Desktop", "Preparando ChatGPT Desktop", "Подготовка ChatGPT Desktop", "جار تجهيز ChatGPT Desktop"),
                 Foreground = _text,
                 FontSize = 24,
                 FontWeight = FontWeights.SemiBold
             };
             _subheading = new TextBlock
             {
-                Text = "初始化启动环境",
+                Text = L("初始化启动环境", "Initializing launch environment", "Initialisation de l'environnement", "Inicializando el entorno", "Инициализация среды", "تهيئة بيئة التشغيل"),
                 Foreground = _muted,
                 FontSize = 12,
                 Margin = new Thickness(0, 6, 0, 0)
@@ -583,7 +587,7 @@ namespace WinBridgeRecovery
             particleGrid.Children.Add(_particles);
             TextBlock centerLabel = new TextBlock
             {
-                Text = "安全检查与更新感知修复",
+                Text = L("安全检查与更新感知修复", "Safe checks and update-aware recovery", "Contrôles sûrs et récupération adaptative", "Comprobaciones seguras y recuperación adaptable", "Безопасная проверка и восстановление", "فحص آمن وإصلاح متوافق مع التحديثات"),
                 Foreground = BrushFrom("#DCEBED"),
                 FontSize = 13,
                 FontWeight = FontWeights.Medium,
@@ -641,7 +645,7 @@ namespace WinBridgeRecovery
             header.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             header.Children.Add(new TextBlock
             {
-                Text = "实时日志",
+                Text = L("实时日志", "Live log", "Journal en direct", "Registro en vivo", "Журнал", "السجل المباشر"),
                 Foreground = _text,
                 FontSize = 12,
                 FontWeight = FontWeights.SemiBold,
@@ -650,7 +654,7 @@ namespace WinBridgeRecovery
             });
             TextBlock hint = new TextBlock
             {
-                Text = "保存在 D 盘启动器 Logs 目录",
+                Text = L("保存在启动器 Logs 目录", "Saved in the launcher's Logs folder", "Enregistré dans le dossier Logs", "Guardado en la carpeta Logs", "Сохраняется в папке Logs", "يحفظ في مجلد Logs"),
                 Foreground = _muted,
                 FontSize = 10,
                 VerticalAlignment = VerticalAlignment.Center,
@@ -708,8 +712,11 @@ namespace WinBridgeRecovery
             };
             _footerStatus = new TextBlock
             {
-                Text = _demoMode ? "演示模式，不会修改系统" :
-                    (_diagnoseMode ? "只读诊断，不会执行修复" : "自动修复模式"),
+                Text = _demoMode
+                    ? L("演示模式，不会修改系统", "Demo mode; no system changes", "Mode démo, sans modification", "Modo demo, sin cambios", "Демо без изменений", "وضع تجريبي بلا تغييرات")
+                    : (_diagnoseMode
+                        ? L("只读诊断，不会执行修复", "Read-only diagnostics", "Diagnostic en lecture seule", "Diagnóstico de solo lectura", "Диагностика без изменений", "تشخيص للقراءة فقط")
+                        : L("自动修复模式", "Automatic recovery mode", "Mode de récupération automatique", "Modo de recuperación automática", "Автоматическое восстановление", "وضع الإصلاح التلقائي")),
                 Foreground = _muted,
                 FontSize = 11,
                 VerticalAlignment = VerticalAlignment.Center
@@ -724,9 +731,9 @@ namespace WinBridgeRecovery
             settings.BorderBrush = Brushes.Transparent;
             settings.BorderThickness = new Thickness(0);
             settings.Content = BuildSettingsGearIcon();
-            settings.ToolTip = "\u8BBE\u7F6E";
+            settings.ToolTip = L("设置", "Settings", "Paramètres", "Configuración", "Настройки", "الإعدادات");
             System.Windows.Automation.AutomationProperties.SetName(
-                settings, "\u8BBE\u7F6E");
+                settings, L("设置", "Settings", "Paramètres", "Configuración", "Настройки", "الإعدادات"));
             settings.Click += delegate { OpenSettingsMenu(); };
             status.Children.Add(settings);
             status.Children.Add(dot);
@@ -738,14 +745,14 @@ namespace WinBridgeRecovery
                 Orientation = Orientation.Horizontal,
                 VerticalAlignment = VerticalAlignment.Center
             };
-            Button logs = ActionButton("打开日志", false);
+            Button logs = ActionButton(L("打开日志", "Open logs", "Ouvrir les journaux", "Abrir registros", "Открыть журналы", "فتح السجلات"), false);
             logs.Click += delegate
             {
                 string logsPath = System.IO.Path.Combine(_root, "Logs");
                 if (Directory.Exists(logsPath))
                     Process.Start(new ProcessStartInfo("explorer.exe", "\"" + logsPath + "\""));
             };
-            Button stop = ActionButton("停止", true);
+            Button stop = ActionButton(L("停止", "Stop", "Arrêter", "Detener", "Остановить", "إيقاف"), true);
             stop.Click += delegate { RequestStop(); };
             controls.Children.Add(logs);
             controls.Children.Add(stop);
@@ -838,7 +845,7 @@ namespace WinBridgeRecovery
             };
             TextBlock state = new TextBlock
             {
-                Text = "等待中",
+                Text = L("等待中", "Waiting", "En attente", "En espera", "Ожидание", "قيد الانتظار"),
                 Foreground = _muted,
                 FontSize = 10,
                 Margin = new Thickness(0, 8, 0, 0)
@@ -933,7 +940,7 @@ namespace WinBridgeRecovery
 
             TextBlock status = new TextBlock
             {
-                Text = "等待检查",
+                Text = L("等待检查", "Awaiting check", "En attente de contrôle", "Esperando comprobación", "Ожидание проверки", "بانتظار الفحص"),
                 Foreground = _muted,
                 FontSize = 11,
                 Margin = new Thickness(0, 12, 0, 0)
@@ -1083,8 +1090,8 @@ namespace WinBridgeRecovery
                 string elapsedText = elapsed.TotalMinutes >= 1
                     ? string.Format("{0}:{1:00}", (int)elapsed.TotalMinutes, elapsed.Seconds)
                     : string.Format("{0} 秒", Math.Max(1, (int)elapsed.TotalSeconds));
-                _subheading.Text = _baseSubheading + " · 后台持续处理中 " + elapsedText;
-                _footerStatus.Text = "处理仍在进行，粒子与进度状态保持响应";
+                _subheading.Text = _baseSubheading + " · " + L("后台持续处理中 ", "Still working ", "Traitement en cours ", "Procesando ", "Обработка ", "المعالجة مستمرة ") + elapsedText;
+                _footerStatus.Text = L("处理仍在进行，界面保持响应", "Processing continues; the interface remains responsive", "Le traitement continue; l'interface reste active", "El proceso continúa; la interfaz responde", "Обработка продолжается; интерфейс отвечает", "المعالجة مستمرة والواجهة تستجيب");
             };
             _heartbeatTimer.Start();
 
@@ -1096,10 +1103,10 @@ namespace WinBridgeRecovery
             _logFlushTimer.Start();
 
             SetStage(0);
-            _heading.Text = "\u68C0\u6D4B Windows \u73AF\u5883";
-            _baseSubheading = "\u6B63\u5728\u8BC6\u522B\u7CFB\u7EDF\u3001\u67B6\u6784\u3001Desktop \u5305\u4E0E\u6587\u4EF6\u7CFB\u7EDF";
+            _heading.Text = L("检测 Windows 环境", "Checking Windows environment", "Vérification de Windows", "Comprobando Windows", "Проверка среды Windows", "فحص بيئة Windows");
+            _baseSubheading = L("正在识别系统、架构、Desktop 包与文件系统", "Detecting the system, architecture, Desktop package, and file system", "Détection du système, de l'architecture et du paquet Desktop", "Detectando sistema, arquitectura y paquete Desktop", "Определение системы, архитектуры и пакета Desktop", "التعرف على النظام والبنية وحزمة Desktop");
             _subheading.Text = _baseSubheading;
-            _footerStatus.Text = "\u81EA\u9002\u5E94\u9884\u68C0\u6B63\u5728\u540E\u53F0\u8FD0\u884C";
+            _footerStatus.Text = L("自适应预检正在后台运行", "Adaptive preflight is running", "Le contrôle adaptatif est en cours", "La comprobación adaptativa está en curso", "Адаптивная проверка выполняется", "الفحص التكيفي قيد التشغيل");
             _targetProgress = 4;
             RunLogMaintenance(false);
             BeginEnvironmentPreflight();
@@ -1531,7 +1538,7 @@ namespace WinBridgeRecovery
 
             if (lower.Contains("[error]") || lower.Contains("fatal error"))
             {
-                _footerStatus.Text = "检测到错误，等待引擎完成回滚";
+                _footerStatus.Text = Ui("检测到错误，等待引擎完成回滚");
             }
 
             if (lower.Contains("package:"))
@@ -1669,9 +1676,9 @@ namespace WinBridgeRecovery
         private void SetProgress(double value, int stage, string heading, string subheading)
         {
             if (value > _targetProgress) _targetProgress = value;
-            _heading.Text = heading;
-            _baseSubheading = subheading;
-            _subheading.Text = subheading;
+            _heading.Text = Ui(heading);
+            _baseSubheading = Ui(subheading);
+            _subheading.Text = _baseSubheading;
             SetStage(stage);
         }
 
@@ -1683,21 +1690,21 @@ namespace WinBridgeRecovery
                 StageView stage = _stages[i];
                 if (i < activeIndex)
                 {
-                    stage.State.Text = "已完成";
+                    stage.State.Text = L("已完成", "Complete", "Terminé", "Completado", "Готово", "مكتمل");
                     stage.State.Foreground = _green;
                     stage.Orbit.SetVisualState(StageOrbitState.Complete);
                     stage.Container.Background = Brushes.Transparent;
                 }
                 else if (i == activeIndex)
                 {
-                    stage.State.Text = "进行中";
+                    stage.State.Text = L("进行中", "In progress", "En cours", "En curso", "Выполняется", "قيد التنفيذ");
                     stage.State.Foreground = _cyan;
                     stage.Orbit.SetVisualState(StageOrbitState.Active);
                     stage.Container.Background = BrushFrom("#122126");
                 }
                 else
                 {
-                    stage.State.Text = "等待中";
+                    stage.State.Text = L("等待中", "Waiting", "En attente", "En espera", "Ожидание", "قيد الانتظار");
                     stage.State.Foreground = _muted;
                     stage.Orbit.SetVisualState(StageOrbitState.Waiting);
                     stage.Container.Background = Brushes.Transparent;
@@ -1764,7 +1771,7 @@ namespace WinBridgeRecovery
         {
             PluginView plugin;
             if (!_plugins.TryGetValue(name, out plugin)) return;
-            plugin.Status.Text = status;
+            plugin.Status.Text = Ui(status);
             plugin.Status.Foreground = color;
             plugin.Fill.Background = color;
             plugin.Percent = percent;
@@ -2011,14 +2018,15 @@ namespace WinBridgeRecovery
             SetStage(4);
             for (int i = 0; i < _stages.Count; i++)
             {
-                _stages[i].State.Text = "已完成";
+                _stages[i].State.Text = L("已完成", "Complete", "Terminé", "Completado", "Готово", "مكتمل");
                 _stages[i].State.Foreground = _green;
                 _stages[i].Orbit.SetVisualState(StageOrbitState.Complete);
                 _stages[i].Orbit.Progress = 1;
                 _stages[i].Container.Background = Brushes.Transparent;
             }
             SetAllPluginsComplete();
-            _heading.Text = "全部完成";
+            _heading.Text = L("全部完成", "All complete", "Tout est terminé", "Todo completado", "Все завершено", "اكتمل كل شيء");
+            message = Ui(message);
             _subheading.Text = message;
             _footerStatus.Text = message;
             AppendLog("[OK] " + message);
@@ -2039,8 +2047,7 @@ namespace WinBridgeRecovery
                 {
                     if (_generalSettings.KeepOpenWhileGaming && IsGameActive())
                     {
-                        _footerStatus.Text =
-                            "\u5C0F\u6E38\u620F\u6B63\u5728\u8FD0\u884C\uFF0C\u542F\u52A8\u5668\u5C06\u4FDD\u6301\u6253\u5F00";
+                        _footerStatus.Text = L("小游戏正在运行，启动器将保持打开", "A mini game is running; the launcher will stay open", "Un mini-jeu est actif; le lanceur reste ouvert", "Hay un minijuego activo; el iniciador seguirá abierto", "Мини-игра запущена; окно останется открытым", "هناك لعبة صغيرة قيد التشغيل؛ سيبقى المشغل مفتوحا");
                         return;
                     }
                     _closeTimer.Stop();
@@ -2086,7 +2093,8 @@ namespace WinBridgeRecovery
         private void Fail(string message)
         {
             if (_heartbeatTimer != null) _heartbeatTimer.Stop();
-            _heading.Text = "启动未完成";
+            message = Ui(message);
+            _heading.Text = L("启动未完成", "Launch incomplete", "Lancement incomplet", "Inicio incompleto", "Запуск не завершен", "لم يكتمل التشغيل");
             _subheading.Text = message;
             _footerStatus.Text = message;
             _percent.Foreground = _coral;
@@ -2102,8 +2110,8 @@ namespace WinBridgeRecovery
             }
 
             MessageBoxResult result = MessageBox.Show(
-                "停止后，本次启动流程将中断。若修复事务尚未提交，下一次运行会按现有安全逻辑自动恢复。\n\n确定停止吗？",
-                "停止 WinBridge Recovery",
+                L("停止后，本次启动流程将中断。若修复事务尚未提交，下一次运行会按现有安全逻辑自动恢复。\n\n确定停止吗？", "Stopping will interrupt this launch. If a recovery transaction is not committed, the next run will recover it using the existing safety logic.\n\nStop now?", "L'arrêt interrompra ce lancement. Une transaction non validée sera récupérée au prochain démarrage.\n\nArrêter maintenant ?", "Al detener se interrumpirá este inicio. Una transacción sin confirmar se recuperará en la próxima ejecución.\n\n¿Detener ahora?", "Остановка прервет запуск. Незавершенная транзакция будет восстановлена при следующем запуске.\n\nОстановить?", "سيؤدي الإيقاف إلى مقاطعة التشغيل. ستتم استعادة أي معاملة غير مكتملة في التشغيل التالي.\n\nهل تريد الإيقاف؟"),
+                L("停止 WinBridge Recovery", "Stop WinBridge Recovery", "Arrêter WinBridge Recovery", "Detener WinBridge Recovery", "Остановить WinBridge Recovery", "إيقاف WinBridge Recovery"),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
             if (result != MessageBoxResult.Yes) return;
@@ -2127,8 +2135,8 @@ namespace WinBridgeRecovery
                 if (!_skipClosePrompt && !_closingAfterSuccess)
                 {
                     MessageBoxResult result = MessageBox.Show(
-                        "安全启动流程仍在运行。关闭界面会停止本次流程。\n\n确定关闭吗？",
-                        "关闭启动器",
+                        L("安全启动流程仍在运行。关闭界面会停止本次流程。\n\n确定关闭吗？", "The safe-launch process is still running. Closing this window will stop it.\n\nClose now?", "Le lancement sécurisé est toujours en cours. Fermer cette fenêtre l'arrêtera.\n\nFermer maintenant ?", "El inicio seguro sigue en curso. Cerrar esta ventana lo detendrá.\n\n¿Cerrar ahora?", "Безопасный запуск еще выполняется. Закрытие окна остановит его.\n\nЗакрыть?", "لا تزال عملية التشغيل الآمن جارية. سيؤدي إغلاق النافذة إلى إيقافها.\n\nهل تريد الإغلاق؟"),
+                        L("关闭启动器", "Close launcher", "Fermer le lanceur", "Cerrar iniciador", "Закрыть лаунчер", "إغلاق المشغل"),
                         MessageBoxButton.YesNo,
                         MessageBoxImage.Warning);
                     if (result != MessageBoxResult.Yes)
@@ -2186,6 +2194,66 @@ namespace WinBridgeRecovery
             image.EndInit();
             if (image.CanFreeze) image.Freeze();
             return image;
+        }
+
+        private string L(string zh, string en, string fr, string es, string ru, string ar)
+        {
+            return LauncherLocale.Pick(_languageSettings == null ? "en" : _languageSettings.Code,
+                zh, en, fr, es, ru, ar);
+        }
+
+        private string Ui(string text)
+        {
+            if (_languageSettings == null || _languageSettings.Code == "zh") return text;
+            switch (text)
+            {
+                case "已识别官方版本": return L(text, "Official version detected", "Version officielle détectée", "Versión oficial detectada", "Официальная версия обнаружена", "تم اكتشاف الإصدار الرسمي");
+                case "文件完整": return L(text, "Files complete", "Fichiers complets", "Archivos completos", "Файлы целы", "الملفات مكتملة");
+                case "正在验证": return L(text, "Verifying", "Vérification", "Verificando", "Проверка", "جار التحقق");
+                case "验证完成": return L(text, "Verified", "Vérifié", "Verificado", "Проверено", "تم التحقق");
+                case "正在识别官方 Store 包": return L(text, "Detecting the official Store package", "Détection du paquet Store officiel", "Detectando el paquete oficial de Store", "Поиск официального пакета Store", "جار اكتشاف حزمة Store الرسمية");
+                case "读取当前安装版本": return L(text, "Reading the installed version", "Lecture de la version installée", "Leyendo la versión instalada", "Чтение установленной версии", "قراءة الإصدار المثبت");
+                case "读取官方插件清单": return L(text, "Reading the official plugin manifest", "Lecture du manifeste officiel", "Leyendo el manifiesto oficial", "Чтение официального манифеста", "قراءة بيان المكونات الرسمي");
+                case "已识别 Browser": return L(text, "Browser detected", "Browser détecté", "Browser detectado", "Browser обнаружен", "تم اكتشاف Browser");
+                case "已识别 Chrome": return L(text, "Chrome detected", "Chrome détecté", "Chrome detectado", "Chrome обнаружен", "تم اكتشاف Chrome");
+                case "已识别 Computer Use": return L(text, "Computer Use detected", "Computer Use détecté", "Computer Use detectado", "Computer Use обнаружен", "تم اكتشاف Computer Use");
+                case "系统预检完成": return L(text, "System check complete", "Vérification système terminée", "Comprobación completada", "Проверка системы завершена", "اكتمل فحص النظام");
+                case "浏览器文件锁已释放": return L(text, "Browser file locks released", "Verrous du navigateur libérés", "Bloqueos del navegador liberados", "Блокировки браузера сняты", "تم تحرير أقفال المتصفح");
+                case "插件状态正常": return L(text, "Plugin state is healthy", "État des extensions sain", "Estado de complementos correcto", "Состояние плагинов исправно", "حالة المكونات سليمة");
+                case "无需替换现有插件文件": return L(text, "Existing plugin files need no replacement", "Aucun remplacement nécessaire", "No se necesita reemplazo", "Замена файлов не требуется", "لا حاجة لاستبدال الملفات");
+                case "同步官方插件源": return L(text, "Syncing the official plugin source", "Synchronisation de la source officielle", "Sincronizando la fuente oficial", "Синхронизация официального источника", "مزامنة مصدر المكونات الرسمي");
+                case "准备 bundled marketplace": return L(text, "Preparing the bundled marketplace", "Préparation du marketplace intégré", "Preparando el marketplace incluido", "Подготовка встроенного marketplace", "تجهيز سوق المكونات المضمن");
+                case "准备运行时": return L(text, "Preparing runtime", "Préparation de l'environnement", "Preparando el entorno", "Подготовка среды", "تجهيز بيئة التشغيل");
+                case "同步 app-server 辅助组件": return L(text, "Syncing app-server helpers", "Synchronisation des composants app-server", "Sincronizando componentes de app-server", "Синхронизация компонентов app-server", "مزامنة مكونات app-server المساعدة");
+                case "验证官方 CLI 内容哈希": return L(text, "Verifying the official CLI content hash", "Vérification du hachage du CLI officiel", "Verificando el hash del CLI oficial", "Проверка хеша официального CLI", "التحقق من بصمة محتوى CLI الرسمي");
+                case "同步当前版本 Node 运行环境": return L(text, "Syncing the current Node runtime", "Synchronisation de l'environnement Node actuel", "Sincronizando el entorno Node actual", "Синхронизация текущей среды Node", "مزامنة بيئة Node الحالية");
+                case "更新并验证插件缓存": return L(text, "Updating and verifying plugin cache", "Mise à jour et vérification du cache", "Actualizando y verificando la caché", "Обновление и проверка кэша", "تحديث ذاكرة المكونات والتحقق منها");
+                case "更新插件注册": return L(text, "Updating plugin registration", "Mise à jour de l'enregistrement", "Actualizando el registro", "Обновление регистрации", "تحديث تسجيل المكونات");
+                case "保留其他 MCP 与用户配置": return L(text, "Preserving other MCP and user settings", "Conservation des autres réglages MCP", "Conservando otros ajustes MCP", "Сохранение других MCP и настроек", "الحفاظ على MCP وإعدادات المستخدم");
+                case "连接 Chrome": return L(text, "Connecting Chrome", "Connexion à Chrome", "Conectando Chrome", "Подключение Chrome", "الاتصال بمتصفح Chrome");
+                case "更新 Native Host 路径": return L(text, "Updating the Native Host path", "Mise à jour du chemin Native Host", "Actualizando la ruta de Native Host", "Обновление пути Native Host", "تحديث مسار Native Host");
+                case "验证插件注册": return L(text, "Verifying plugin registration", "Vérification de l'enregistrement", "Verificando el registro", "Проверка регистрации", "التحقق من تسجيل المكونات");
+                case "使用当前官方 CLI 复核": return L(text, "Rechecking with the current official CLI", "Nouvelle vérification avec le CLI officiel", "Revisando con el CLI oficial actual", "Повторная проверка текущим официальным CLI", "إعادة التحقق باستخدام CLI الرسمي الحالي");
+                case "修复与静态验证完成": return L(text, "Recovery and static checks complete", "Récupération et contrôles terminés", "Recuperación y comprobaciones completadas", "Восстановление и проверки завершены", "اكتمل الإصلاح والفحص الثابت");
+                case "准备启动 ChatGPT Desktop": return L(text, "Preparing to launch ChatGPT Desktop", "Préparation du lancement de ChatGPT Desktop", "Preparando el inicio de ChatGPT Desktop", "Подготовка запуска ChatGPT Desktop", "الاستعداد لتشغيل ChatGPT Desktop");
+                case "当前状态健康": return L(text, "Current state is healthy", "État actuel sain", "El estado actual es correcto", "Текущее состояние исправно", "الحالة الحالية سليمة");
+                case "无需修复，准备启动": return L(text, "No recovery needed; preparing to launch", "Aucune récupération requise", "No se necesita recuperación", "Восстановление не требуется", "لا حاجة للإصلاح؛ جار التشغيل");
+                case "正在启动 ChatGPT Desktop": return L(text, "Launching ChatGPT Desktop", "Lancement de ChatGPT Desktop", "Iniciando ChatGPT Desktop", "Запуск ChatGPT Desktop", "جار تشغيل ChatGPT Desktop");
+                case "加载官方资源镜像": return L(text, "Loading the official resource mirror", "Chargement du miroir de ressources officiel", "Cargando el espejo de recursos oficial", "Загрузка официального зеркала ресурсов", "تحميل مرآة الموارد الرسمية");
+                case "等待启动状态稳定": return L(text, "Waiting for startup to stabilize", "Attente de stabilisation", "Esperando estabilización", "Ожидание стабилизации", "بانتظار استقرار التشغيل");
+                case "将完成两次连续清洁检查": return L(text, "Waiting for two consecutive clean checks", "Attente de deux contrôles propres consécutifs", "Esperando dos comprobaciones limpias consecutivas", "Ожидание двух последовательных чистых проверок", "بانتظار فحصين نظيفين متتاليين");
+                case "启动后复核": return L(text, "Post-launch verification", "Vérification après lancement", "Verificación posterior", "Проверка после запуска", "التحقق بعد التشغيل");
+                case "清洁检查 1 / 2，等待第二次稳定结果": return L(text, "Clean check 1 / 2; waiting for the second stable result", "Contrôle propre 1 / 2 ; attente du second résultat", "Comprobación limpia 1 / 2; esperando el segundo resultado", "Чистая проверка 1 / 2; ожидание второго результата", "الفحص النظيف 1 / 2؛ بانتظار النتيجة الثانية");
+                case "清洁检查 2 / 2": return L(text, "Clean check 2 / 2", "Contrôle propre 2 / 2", "Comprobación limpia 2 / 2", "Чистая проверка 2 / 2", "الفحص النظيف 2 / 2");
+                case "启动完成": return L(text, "Launch complete", "Lancement terminé", "Inicio completado", "Запуск завершен", "اكتمل التشغيل");
+                case "三插件静态状态稳定": return L(text, "All three plugins have a stable static state", "Les trois extensions sont stables", "Los tres complementos están estables", "Все три плагина стабильны", "حالة المكونات الثلاثة مستقرة");
+                case "只读诊断完成。": return L(text, "Read-only diagnostics complete.", "Diagnostic terminé.", "Diagnóstico completado.", "Диагностика завершена.", "اكتمل التشخيص.");
+                case "ChatGPT Desktop 已启动并完成静态复核。": return L(text, "ChatGPT Desktop started and passed static verification.", "ChatGPT Desktop a démarré et a été vérifié.", "ChatGPT Desktop se inició y verificó.", "ChatGPT Desktop запущен и проверен.", "تم تشغيل ChatGPT Desktop والتحقق منه.");
+                case "安全启动器未完成。请查看实时日志或打开 Logs 目录。": return L(text, "Safe launch did not complete. Review the live log or Logs folder.", "Le lancement sûr a échoué. Consultez les journaux.", "El inicio seguro no se completó. Revise los registros.", "Безопасный запуск не завершен. Проверьте журналы.", "لم يكتمل التشغيل الآمن. راجع السجلات.");
+                case "演示完成，未修改任何系统状态。": return L(text, "Demo complete; no system state was changed.", "Démonstration terminée ; aucun état système modifié.", "Demostración completada; no se modificó el sistema.", "Демонстрация завершена; состояние системы не изменено.", "اكتمل العرض؛ لم تتغير حالة النظام.");
+                case "检测到错误，等待引擎完成回滚": return L(text, "An error was detected; waiting for the engine to finish rollback", "Erreur détectée ; attente de la restauration", "Se detectó un error; esperando la reversión", "Обнаружена ошибка; ожидание отката", "تم اكتشاف خطأ؛ بانتظار اكتمال التراجع");
+                default: return text;
+            }
         }
 
         private sealed class LauncherProcessSession
