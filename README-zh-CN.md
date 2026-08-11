@@ -6,6 +6,14 @@
 
 > 本项目是学生独立开发的非商业社区测试项目，与 OpenAI 无隶属、赞助或认可关系。第三方名称仅用于说明兼容对象；项目不包含第三方品牌图标，也不重新分发官方应用或插件文件。
 
+## 项目沿革
+
+WinBridge Recovery 是早期公开脚本项目 **[Codex Desktop Plugin Repair Safety Kit](https://github.com/zemeng5208/codex-desktop-plugin-repair-safety-kit)** 的当前维护实现。
+
+早期 Safety Kit 主要针对 Windows Codex Desktop 插件运行时异常，提供保守的健康检查以及面向 `node_repl` 的定向修复。WinBridge Recovery 延续同一类恢复问题，并进一步扩展为完整工程化工具：加入版本感知的官方包识别、bundled marketplace / cache / `latest` 状态协调、运行时与注册状态恢复、经过校验的备份与回滚、GUI 启动器、安装器、免安装便携包，以及针对新版 Desktop 包结构的持续兼容工作。
+
+旧仓库不会被合并或重写，而是作为项目早期公开阶段继续保留，从而保留原始 Git 历史。当前开发、版本发布和主要文档以本仓库为准。
+
 ## 主要功能
 
 - 自动识别当前安装的官方 Codex Desktop 包及其当前资源版本。
