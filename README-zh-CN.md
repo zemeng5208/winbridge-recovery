@@ -32,6 +32,18 @@
 
 安装后双击桌面上的 **WinBridge Recovery**。启动器会提醒并关闭 Chrome/Edge，完成检查、必要修复、Desktop 启动及后检查。完成后再打开 Chrome 验证扩展连接。
 
+### 免安装便携 ZIP
+
+也可以从最新 GitHub Release 下载 `WinBridge-Recovery-v3.0.0-beta.1-portable.zip`。将其中完整的 `WinBridge-Recovery` 文件夹解压到普通、可写的用户目录，然后运行：
+
+```text
+WinBridge-Recovery\LauncherUI\WinBridgeRecovery.exe
+```
+
+便携包不会安装系统服务、创建卸载注册项，也不包含官方 Desktop 或插件文件。请保持解压后的目录结构完整，不要直接在 ZIP 内运行脚本。首次启动会检测当前 Windows 环境和本机已安装的官方 Desktop 包，修复资源只从目标电脑的当前官方包生成。
+
+无论使用安装器还是便携 ZIP，运行前都应核对 Release Notes 中公布的 SHA-256。项目使用的是自签测试证书，并非 Windows 公开信任的商业签名。
+
 ## 验证标准
 
 静态检查通过不等于三个插件完整可用。最终应分别验证：
