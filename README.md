@@ -9,8 +9,11 @@ WinBridge Recovery detects and repairs bundled marketplace, plugin cache, `lates
 ## Features
 
 - Version-aware detection of the locally installed Codex Desktop package.
+- Reads the current package's `cua_node/manifest.json` instead of assuming a fixed runtime layout.
+- Uses the full package version plus bundled-plugin, CLI, and CUA content hashes to invalidate stale mirrors after updates.
 - Browser lock prevention by closing Chrome and Edge before cache reconciliation.
 - Repair only when static state is inconsistent.
+- Long-path-safe backup manifests for deeply nested plugin dependencies.
 - Up to three verified recovery backups, preserved by default during uninstall.
 - Post-launch consistency checks, diagnostics, rollback, self-test, themes, and mini games.
 

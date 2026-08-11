@@ -1,25 +1,32 @@
-# WinBridge Recovery v2.1.0 Beta 1
+# WinBridge Recovery v3.0.0 Beta 1
 
 Independent Windows recovery launcher for GPT/Codex Desktop Browser, Chrome, and Computer Use plugin state.
 
 ## Highlights
 
-- New neutral product name and original WinBridge visual identity.
-- Removed third-party logo-style assets and the optional X/Twitter feed feature.
-- Added clear non-affiliation, student, non-commercial, and third-party-rights notices.
-- Preserved version-aware marketplace, cache, runtime, registration, backup, rollback, and launch workflows.
-- Hardened installer paths against directory junction/reparse-point traversal.
-- Hardened uninstall so it removes only the manifest-owned product folder and preserves unrelated files in a user-selected parent directory.
-- Desktop shortcut is now `WinBridge Recovery.lnk` and will not overwrite an unrelated shortcut with the same name.
+- Adapts to current package runtime paths through the official `cua_node/manifest.json` contract.
+- Uses the full package version and bundled-plugin, CLI, and CUA hashes for resource-mirror identity.
+- Removes the obsolete requirement for `cua_node/bin/CHANGELOG.md`.
+- Adds long-path-safe backup manifest creation and validation for deeply nested dependencies.
+- Keeps the newest two valid resource mirrors while accepting both legacy and v3 mirror names.
+- Preserves the existing marketplace, cache, `latest`, registration, rollback, safe-launch, theme, and mini-game workflows.
 
 ## Verification
 
 - Launcher and guardian compilation: PASS.
 - Installer compilation: PASS.
+- PowerShell syntax and self-test: PASS.
+- Long-path backup regression (315-character dependency path): PASS.
+- Current package adaptation (`26.803.10989.0`): PASS.
+- Browser, Chrome, and Computer Use independent interaction checks: PASS on the development machine.
 - Isolated silent install: PASS.
 - Isolated uninstall: PASS.
 - Unrelated file in selected install parent survived uninstall: PASS.
 - Recovery backup directory preserved by default: PASS.
 - Source privacy/secret scan: 0 matches for configured high-risk patterns.
+
+## Upgrade note
+
+v3 replaces stale v1/v2 resource mirrors only when validation fails. It does not bundle official application or plugin files; recovery content is derived from the official package installed on the target computer.
 
 The installer uses a self-signed testing certificate. Windows may report an untrusted certificate chain. Verify the published SHA-256 before running it.
