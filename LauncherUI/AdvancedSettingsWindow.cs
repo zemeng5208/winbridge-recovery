@@ -488,11 +488,13 @@ namespace WinBridgeRecovery
 
             ContextMenu menu = new ContextMenu
             {
+                Width = 112,
                 Background = Brush("#FF11161B"),
                 Foreground = Brush("#FFF0F3F5"),
                 BorderBrush = Brush("#FF48515A"),
                 BorderThickness = new Thickness(1),
-                Placement = PlacementMode.Bottom
+                Placement = PlacementMode.Bottom,
+                Template = CreateContextMenuTemplate()
             };
             for (int i = 0; i < codes.Length; i++)
             {
@@ -501,6 +503,8 @@ namespace WinBridgeRecovery
                 MenuItem item = new MenuItem
                 {
                     Header = nextName,
+                    Width = 106,
+                    Height = 30,
                     Foreground = Brush("#FFE7ECEF"),
                     Background = Brushes.Transparent,
                     Padding = new Thickness(12, 7, 12, 7),
@@ -556,14 +560,38 @@ namespace WinBridgeRecovery
             frame.Name = "MenuFrame";
             frame.SetBinding(Border.BackgroundProperty, new Binding("Background") { RelativeSource = new RelativeSource(RelativeSourceMode.TemplatedParent) });
             frame.SetValue(Border.CornerRadiusProperty, new CornerRadius(5));
+            frame.SetValue(Border.PaddingProperty, new Thickness(10, 5, 10, 5));
             FrameworkElementFactory content = new FrameworkElementFactory(typeof(ContentPresenter));
             content.SetValue(ContentPresenter.ContentSourceProperty, "Header");
-            content.SetValue(ContentPresenter.MarginProperty, new Thickness(2));
+            content.SetValue(ContentPresenter.HorizontalAlignmentProperty, HorizontalAlignment.Left);
+            content.SetValue(ContentPresenter.VerticalAlignmentProperty, VerticalAlignment.Center);
+            content.SetBinding(System.Windows.Documents.TextElement.ForegroundProperty, new Binding("Foreground") { RelativeSource = new RelativeSource(RelativeSourceMode.TemplatedParent) });
             frame.AppendChild(content);
             template.VisualTree = frame;
             Trigger highlighted = new Trigger { Property = MenuItem.IsHighlightedProperty, Value = true };
             highlighted.Setters.Add(new Setter(Border.BackgroundProperty, Brush("#FF26313A"), "MenuFrame"));
             template.Triggers.Add(highlighted);
+            return template;
+        }
+
+        private static ControlTemplate CreateContextMenuTemplate()
+        {
+            ControlTemplate template = new ControlTemplate(typeof(ContextMenu));
+            FrameworkElementFactory frame = new FrameworkElementFactory(typeof(Border));
+            frame.SetValue(Border.BackgroundProperty, Brush("#FF11161B"));
+            frame.SetValue(Border.BorderBrushProperty, Brush("#FF48515A"));
+            frame.SetValue(Border.BorderThicknessProperty, new Thickness(1));
+            frame.SetValue(Border.CornerRadiusProperty, new CornerRadius(8));
+            frame.SetValue(Border.PaddingProperty, new Thickness(2));
+            frame.SetValue(UIElement.EffectProperty, new DropShadowEffect
+            {
+                BlurRadius = 16,
+                ShadowDepth = 5,
+                Opacity = 0.42,
+                Color = Colors.Black
+            });
+            frame.AppendChild(new FrameworkElementFactory(typeof(ItemsPresenter)));
+            template.VisualTree = frame;
             return template;
         }
 
