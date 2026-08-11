@@ -1,0 +1,82 @@
+name: Bug report
+description: Report a reproducible WinBridge Recovery problem
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve WinBridge Recovery. Please do not upload passwords, cookies, tokens, API keys, session databases, full private configuration files, or other sensitive data.
+  - type: input
+    id: winbridge_version
+    attributes:
+      label: WinBridge Recovery version
+      description: Example: v3.0.0-beta.1 or v3.1.0-beta.1
+      placeholder: v3.x.x
+    validations:
+      required: true
+  - type: input
+    id: desktop_version
+    attributes:
+      label: Codex Desktop package version
+      description: Enter the package/app version if known.
+      placeholder: 26.x.x.x
+    validations:
+      required: false
+  - type: dropdown
+    id: affected_surface
+    attributes:
+      label: Affected surface
+      options:
+        - Browser
+        - Chrome
+        - Computer Use
+        - Marketplace / plugin cache
+        - latest pointer / runtime path
+        - Installer / uninstall
+        - Portable package
+        - Launcher UI
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: windows_version
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2
+    validations:
+      required: true
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Describe the failure and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the smallest sequence that reproduces the issue.
+      placeholder: |
+        1. Start WinBridge Recovery
+        2. Run ...
+        3. Observe ...
+    validations:
+      required: false
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Relevant diagnostics
+      description: Paste only the minimal non-sensitive diagnostic lines needed to understand the issue. Redact usernames, paths, IDs, account data, tokens, cookies, and private configuration values.
+      render: text
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Safety checks
+      options:
+        - label: I removed credentials, tokens, cookies, session data, and other private information from this report.
+          required: true
+        - label: I understand WinBridge Recovery does not bypass enterprise or browser security policies.
+          required: true
