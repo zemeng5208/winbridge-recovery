@@ -1,3 +1,29 @@
+# WinBridge Recovery v3.1.1
+
+## Maintenance update
+
+- Fixed in-app update discovery when the newest GitHub release is marked as a prerelease.
+- Fixed Snake and Minesweeper closing immediately after selection when launcher auto-close is enabled.
+- Restored the compact gear menu: mini games, theme, public activity, then full settings.
+- Reduced main progress and particle animation frequency and wave sampling to improve pointer and settings responsiveness.
+- Unified private and public launcher version metadata at `3.1.1`.
+
+## Verification
+
+- Public and private launcher compilation: PASS.
+- Public launcher file version: `3.1.1.0`.
+- Settings, game selection, and launcher functions: user acceptance test PASS.
+- Repair-core PowerShell behavior was not modified in this maintenance release.
+
+## v3.1.1 download verification
+
+```text
+SHA256  487561613181D8575D421B0F6AB02E56FC7EE9EDEE85E3780D6EF305C0A4EC9B  WinBridge-Recovery-Setup.exe
+SHA256  6918D3280B79249B5DDD7C46ACB157D4FA51586E8C26474DEB563D77E76EFC5D  WinBridge-Recovery-v3.1.1-portable.zip
+```
+
+---
+
 # WinBridge Recovery v3.1.0 Beta 1
 
 Independent Windows recovery launcher for GPT/Codex Desktop Browser, Chrome, and Computer Use plugin state.

@@ -46,7 +46,7 @@ WinBridge Recovery 是早期公开脚本项目 **[Codex Desktop Plugin Repair Sa
 
 ### 免安装便携 ZIP
 
-也可以从最新 GitHub Release 下载 `WinBridge-Recovery-v3.1.0-beta.1-portable.zip`。将其中完整的 `WinBridge-Recovery` 文件夹解压到普通、可写的用户目录，然后运行：
+也可以从最新 GitHub Release 下载 `WinBridge-Recovery-v3.1.1-portable.zip`。将其中完整的 `WinBridge-Recovery` 文件夹解压到普通、可写的用户目录，然后运行：
 
 ```text
 WinBridge-Recovery\LauncherUI\WinBridgeRecovery.exe

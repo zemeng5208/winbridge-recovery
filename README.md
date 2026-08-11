@@ -45,7 +45,7 @@ Download `WinBridge-Recovery-Setup.exe` from the latest GitHub Release. The inst
 
 ### Portable ZIP
 
-Download `WinBridge-Recovery-v3.1.0-beta.1-portable.zip`, extract the complete `WinBridge-Recovery` folder to a normal user-writable location, and run:
+Download `WinBridge-Recovery-v3.1.1-portable.zip`, extract the complete `WinBridge-Recovery` folder to a normal user-writable location, and run:
 
 ```text
 WinBridge-Recovery\LauncherUI\WinBridgeRecovery.exe
