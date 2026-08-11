@@ -3,6 +3,7 @@
 *.dll
 *.pdb
 *.runtime.ps1
+*.sha256
 
 # Runtime state
 Logs/
