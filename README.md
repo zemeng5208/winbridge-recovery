@@ -25,6 +25,24 @@ WinBridge Recovery detects and repairs bundled marketplace, plugin cache, `lates
 - Writes only to documented installation, backup, and required Codex user-state locations.
 - Uninstall removes only files owned by the installation manifest, not an arbitrary selected parent directory.
 
+## Install or run portable
+
+### Installer
+
+Download `WinBridge-Recovery-Setup.exe` from the latest GitHub Release. The installer lets you choose the application and backup locations, creates the desktop shortcut, and registers the included uninstaller.
+
+### Portable ZIP
+
+Download `WinBridge-Recovery-v3.0.0-beta.1-portable.zip`, extract the complete `WinBridge-Recovery` folder to a normal user-writable location, and run:
+
+```text
+WinBridge-Recovery\LauncherUI\WinBridgeRecovery.exe
+```
+
+The portable package does not install a service, create an uninstall entry, or bundle any official Desktop/plugin files. Keep the extracted folder together; do not run individual scripts directly from inside the ZIP. On first use it detects the current Windows and locally installed official Desktop package. Recovery content is generated only from that package.
+
+Before either method, compare the downloaded file's SHA-256 with the value shown in the Release notes. The included signature is a self-signed testing certificate and is not publicly trusted.
+
 ## Build
 
 ```powershell
