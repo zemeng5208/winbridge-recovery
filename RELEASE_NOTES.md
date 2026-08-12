@@ -6,6 +6,8 @@
 - Fixed Snake and Minesweeper closing immediately after selection when launcher auto-close is enabled.
 - Restored the compact gear menu: mini games, theme, public activity, then full settings.
 - Reduced main progress and particle animation frequency and wave sampling to improve pointer and settings responsiveness.
+- Fixed uninstall failures on deeply nested backup trees that exceed the legacy Windows path limit.
+- The uninstaller now uses Unicode long-path APIs, tolerates entries that disappear during cleanup, clears blocking file attributes, and does not traverse directory reparse points.
 - Unified private and public launcher version metadata at `3.1.1`.
 
 ## Verification
@@ -13,12 +15,14 @@
 - Public and private launcher compilation: PASS.
 - Public launcher file version: `3.1.1.0`.
 - Settings, game selection, and launcher functions: user acceptance test PASS.
+- Uninstaller source regression test: PASS with a 427-character path, a read-only file, and an already-missing directory.
+- Rebuilt installer payload regression test: PASS using the uninstaller extracted by an isolated `--test-mode` installation.
 - Repair-core PowerShell behavior was not modified in this maintenance release.
 
 ## v3.1.1 download verification
 
 ```text
-SHA256  487561613181D8575D421B0F6AB02E56FC7EE9EDEE85E3780D6EF305C0A4EC9B  WinBridge-Recovery-Setup.exe
+SHA256  DC3248E7C16620CA2B0940D036F1C01C81B77EC96672E8456B7654A13605E9A6  WinBridge-Recovery-Setup.exe
 SHA256  6918D3280B79249B5DDD7C46ACB157D4FA51586E8C26474DEB563D77E76EFC5D  WinBridge-Recovery-v3.1.1-portable.zip
 ```
 

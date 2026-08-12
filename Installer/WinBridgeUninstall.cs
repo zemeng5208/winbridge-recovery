@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
@@ -21,6 +22,60 @@ namespace WinBridgeUninstall
     {
         internal const string ProductFolder = "WinBridge-Recovery";
         internal const string RegistryPath = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\WinBridgeRecovery";
+
+        private const uint FileAttributeDirectory = 0x10;
+        private const uint FileAttributeReparsePoint = 0x400;
+        private const uint FileAttributeNormal = 0x80;
+        private const uint FileAttributeReadOnly = 0x1;
+        private const uint FileAttributeHidden = 0x2;
+        private const uint FileAttributeSystem = 0x4;
+        private const uint InvalidFileAttributes = 0xFFFFFFFF;
+        private const int ErrorFileNotFound = 2;
+        private const int ErrorPathNotFound = 3;
+        private const int ErrorNoMoreFiles = 18;
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct Win32FindData
+        {
+            internal uint FileAttributes;
+            internal System.Runtime.InteropServices.ComTypes.FILETIME CreationTime;
+            internal System.Runtime.InteropServices.ComTypes.FILETIME LastAccessTime;
+            internal System.Runtime.InteropServices.ComTypes.FILETIME LastWriteTime;
+            internal uint FileSizeHigh;
+            internal uint FileSizeLow;
+            internal uint Reserved0;
+            internal uint Reserved1;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
+            internal string FileName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 14)]
+            internal string AlternateFileName;
+        }
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern IntPtr FindFirstFileW(string fileName, out Win32FindData findFileData);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool FindNextFileW(IntPtr findFile, out Win32FindData findFileData);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool FindClose(IntPtr findFile);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern uint GetFileAttributesW(string fileName);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool SetFileAttributesW(string fileName, uint fileAttributes);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool DeleteFileW(string fileName);
+
+        [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool RemoveDirectoryW(string pathName);
 
         internal static void Begin(string installRoot, string backupRoot, bool removeBackups, bool silent)
         {
@@ -67,9 +122,9 @@ namespace WinBridgeUninstall
             if (removeBackups && !string.IsNullOrWhiteSpace(backupRoot))
             {
                 backupRoot = ValidateBackupPath(backupRoot);
-                if (Directory.Exists(backupRoot)) Directory.Delete(backupRoot, true);
+                DeleteDirectoryTree(backupRoot);
             }
-            if (Directory.Exists(productRoot)) Directory.Delete(productRoot, true);
+            DeleteDirectoryTree(productRoot);
             string uninstaller = Path.Combine(installRoot, "Uninstall WinBridge Recovery.exe");
             if (File.Exists(uninstaller)) File.Delete(uninstaller);
             string certificate = Path.Combine(installRoot, "zemeng5208-Test-Code-Signing.cer");
@@ -124,6 +179,120 @@ namespace WinBridgeUninstall
             if (!string.Equals(Path.GetFileName(full), "CodexPluginRepairBackups", StringComparison.OrdinalIgnoreCase))
                 throw new InvalidOperationException("The backup folder must be named CodexPluginRepairBackups.");
             return full;
+        }
+
+        private static void DeleteDirectoryTree(string path)
+        {
+            string full = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar);
+            string extended = ToExtendedPath(full);
+            DeleteDirectoryNative(extended);
+            if (PathExistsNative(extended))
+                throw new IOException("The directory could not be removed: " + full);
+        }
+
+        private static string ToExtendedPath(string path)
+        {
+            if (path.StartsWith(@"\\?\", StringComparison.Ordinal)) return path;
+            if (path.StartsWith(@"\\", StringComparison.Ordinal))
+                return @"\\?\UNC\" + path.Substring(2);
+            return @"\\?\" + path;
+        }
+
+        private static void DeleteDirectoryNative(string path)
+        {
+            uint attributes = GetFileAttributesW(path);
+            if (attributes == InvalidFileAttributes)
+            {
+                ThrowUnlessMissing(path);
+                return;
+            }
+            if ((attributes & FileAttributeDirectory) == 0)
+                throw new IOException("Expected a directory while uninstalling: " + path);
+
+            if ((attributes & FileAttributeReparsePoint) == 0)
+            {
+                Win32FindData entry;
+                IntPtr handle = FindFirstFileW(Path.Combine(path, "*"), out entry);
+                if (handle == new IntPtr(-1))
+                {
+                    int error = Marshal.GetLastWin32Error();
+                    if (error != ErrorFileNotFound && error != ErrorPathNotFound)
+                        throw CreateWin32IOException("enumerate", path, error);
+                }
+                else
+                {
+                    try
+                    {
+                        bool more = true;
+                        while (more)
+                        {
+                            string name = entry.FileName;
+                            if (name != "." && name != "..")
+                            {
+                                string child = Path.Combine(path, name);
+                                if ((entry.FileAttributes & FileAttributeDirectory) != 0)
+                                    DeleteDirectoryNative(child);
+                                else
+                                    DeleteFileNative(child, entry.FileAttributes);
+                            }
+                            more = FindNextFileW(handle, out entry);
+                        }
+                        int error = Marshal.GetLastWin32Error();
+                        if (error != ErrorNoMoreFiles && error != ErrorFileNotFound && error != ErrorPathNotFound)
+                            throw CreateWin32IOException("enumerate", path, error);
+                    }
+                    finally
+                    {
+                        FindClose(handle);
+                    }
+                }
+            }
+
+            ClearBlockingAttributes(path, attributes);
+            if (!RemoveDirectoryW(path)) ThrowUnlessMissing(path, "remove directory");
+        }
+
+        private static void DeleteFileNative(string path, uint attributes)
+        {
+            ClearBlockingAttributes(path, attributes);
+            if (!DeleteFileW(path)) ThrowUnlessMissing(path, "remove file");
+        }
+
+        private static void ClearBlockingAttributes(string path, uint attributes)
+        {
+            uint blocking = FileAttributeReadOnly | FileAttributeHidden | FileAttributeSystem;
+            if ((attributes & blocking) == 0) return;
+            uint updated = attributes & ~blocking;
+            if (updated == 0) updated = FileAttributeNormal;
+            if (!SetFileAttributesW(path, updated)) ThrowUnlessMissing(path, "clear attributes");
+        }
+
+        private static bool PathExistsNative(string path)
+        {
+            uint attributes = GetFileAttributesW(path);
+            if (attributes != InvalidFileAttributes) return true;
+            int error = Marshal.GetLastWin32Error();
+            if (error == ErrorFileNotFound || error == ErrorPathNotFound) return false;
+            throw CreateWin32IOException("inspect", path, error);
+        }
+
+        private static void ThrowUnlessMissing(string path)
+        {
+            ThrowUnlessMissing(path, "inspect");
+        }
+
+        private static void ThrowUnlessMissing(string path, string operation)
+        {
+            int error = Marshal.GetLastWin32Error();
+            if (error == ErrorFileNotFound || error == ErrorPathNotFound) return;
+            throw CreateWin32IOException(operation, path, error);
+        }
+
+        private static IOException CreateWin32IOException(string operation, string path, int error)
+        {
+            return new IOException(
+                "Unable to " + operation + " during uninstall: " + path +
+                " (Win32 error " + error.ToString() + ": " + new Win32Exception(error).Message + ")");
         }
 
         private static void RemoveDesktopShortcutIfOwned(string installRoot)
