@@ -1,0 +1,7 @@
+node_modules/
+out/
+artifacts/
+runtime-data/
+.test-artifacts/
+frontend/dist/
+*.log

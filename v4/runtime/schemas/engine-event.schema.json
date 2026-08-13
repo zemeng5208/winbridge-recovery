@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "winbridge://schemas/engine-event-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "eventId", "operationId", "timestamp", "kind", "actualProgress", "displayedProgress", "engineStageState", "presentedStageState", "message", "finalVerificationPassed", "priority", "details"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "eventId": { "type": "string" },
+    "operationId": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "kind": { "enum": ["Progress", "Stage", "Failed", "Cancelled", "ResultReady"] },
+    "actualProgress": { "type": "number", "minimum": 0, "maximum": 100 },
+    "displayedProgress": { "type": "number", "minimum": 0, "maximum": 100 },
+    "engineStageState": { "type": "string" },
+    "presentedStageState": { "type": "string" },
+    "message": { "type": "string" },
+    "finalVerificationPassed": { "type": "boolean" },
+    "priority": { "enum": ["normal", "terminal"] },
+    "details": { "type": ["object", "null"] }
+  }
+}

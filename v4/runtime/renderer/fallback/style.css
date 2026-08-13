@@ -1,0 +1,18 @@
+:root { color-scheme: dark; font-family: "Segoe UI Variable", "Segoe UI", sans-serif; background: #080c16; color: #eef2ff; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; min-height: 100vh; background: radial-gradient(circle at top right, #172348 0, #080c16 42%); }
+main { width: min(1080px, calc(100% - 48px)); margin: 0 auto; padding: 54px 0; }
+header { margin-bottom: 28px; -webkit-app-region: drag; }
+.eyebrow { color: #7f9cff; font-size: 12px; letter-spacing: .18em; font-weight: 700; }
+h1 { margin: 6px 0; font-size: clamp(34px, 5vw, 62px); line-height: 1; }
+h2 { font-size: 15px; color: #b9c5e8; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 24px 0; }
+button { border: 0; border-radius: 9px; padding: 10px 16px; color: #fff; background: #4a6cf7; font: inherit; cursor: pointer; -webkit-app-region: no-drag; }
+button.secondary { background: #1c2740; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.progress, section { margin-top: 18px; border: 1px solid #26324d; border-radius: 14px; padding: 18px; background: rgba(13, 19, 34, .82); }
+.progressMeta { display: flex; justify-content: space-between; color: #cbd5f0; margin-bottom: 9px; }
+.track { height: 10px; border-radius: 999px; overflow: hidden; background: #18223a; }
+#bar { width: 0; height: 100%; background: linear-gradient(90deg, #4a6cf7, #8b5cf6, #22c7a9); transition: width 140ms linear; }
+pre { max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: #c8d3f0; font: 12px/1.55 "Cascadia Mono", Consolas, monospace; }
+@media (max-width: 600px) { main { width: min(100% - 24px, 1080px); padding: 28px 0; } }

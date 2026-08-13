@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "winbridge://schemas/plugin-assets-v1",
+  "$defs": {
+    "unavailable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "available"],
+      "properties": {
+        "id": { "enum": ["browser", "chrome", "computer-use"] },
+        "available": { "const": false }
+      }
+    },
+    "available": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "available", "displayName", "version", "hash", "dataUrl"],
+      "properties": {
+        "id": { "enum": ["browser", "chrome", "computer-use"] },
+        "available": { "const": true },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "version": { "type": "string", "maxLength": 64 },
+        "hash": { "type": "string", "pattern": "^[0-9A-F]{64}$" },
+        "dataUrl": { "type": "string", "pattern": "^data:image/(png|webp|jpeg);base64," }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["readOnly", "items"],
+  "properties": {
+    "readOnly": { "const": true },
+    "items": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "oneOf": [{ "$ref": "#/$defs/unavailable" }, { "$ref": "#/$defs/available" }] }
+    }
+  }
+}

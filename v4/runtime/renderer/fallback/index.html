@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'; frame-src 'none'; form-action 'none'">
+  <title>WinBridge Recovery 4.0 Runtime</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">V4 PRE-RELEASE RUNTIME</p>
+      <h1>WinBridge Recovery</h1>
+      <p id="runtimeStatus">正在连接隔离运行时…</p>
+    </header>
+    <section class="actions" aria-label="运行时操作">
+      <button id="diagnose">只读诊断</button>
+      <button id="cancel" class="secondary">取消当前操作</button>
+      <button id="refresh" class="secondary">重新检测系统</button>
+      <button id="logs" class="secondary">打开日志</button>
+      <button id="gpt" class="secondary">直接打开 GPT</button>
+    </section>
+    <section class="progress" aria-label="进度">
+      <div class="progressMeta"><span id="stage">Idle</span><span id="percentage">0%</span></div>
+      <div class="track"><div id="bar"></div></div>
+    </section>
+    <section>
+      <h2>结构化结果</h2>
+      <pre id="report">等待只读诊断。真实修复默认禁用，并始终要求先有诊断报告和显式选择。</pre>
+    </section>
+    <section>
+      <h2>实时日志</h2>
+      <pre id="terminal" aria-live="polite"></pre>
+    </section>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>

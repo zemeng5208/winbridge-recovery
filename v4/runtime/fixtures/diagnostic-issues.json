@@ -1,0 +1,10 @@
+[
+  { "category": "marketplace-missing-incomplete", "evidence": ["Synthetic: marketplace incomplete"], "expectedSuggestionMode": "suggest-repair" },
+  { "category": "plugin-cache-drift", "evidence": ["Synthetic: plugin cache hash mismatch"], "expectedSuggestionMode": "suggest-repair" },
+  { "category": "latest-pointer", "evidence": ["Synthetic: latest junction stale"], "expectedSuggestionMode": "suggest-repair" },
+  { "category": "runtime-node-repl-path", "evidence": ["Synthetic: node_repl path invalid"], "expectedSuggestionMode": "suggest-repair" },
+  { "category": "extension-host-lock", "evidence": ["Synthetic: extension host file lock"], "expectedSuggestionMode": "report-only" },
+  { "category": "uninstall-eperm-longpath", "evidence": ["Synthetic: uninstall EPERM long path"], "expectedSuggestionMode": "report-only" },
+  { "category": "computer-use-connection", "evidence": ["Synthetic: Computer Use connection unavailable"], "expectedSuggestionMode": "report-only" },
+  { "category": "browser-chrome-availability", "evidence": ["Synthetic: Browser and Chrome availability unavailable"], "expectedSuggestionMode": "report-only" }
+]

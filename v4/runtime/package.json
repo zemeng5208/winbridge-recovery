@@ -1,0 +1,21 @@
+{
+  "name": "winbridge-recovery-v4",
+  "version": "4.0.0-alpha.1",
+  "private": true,
+  "description": "WinBridge Recovery 4.0 isolated Electron runtime shell",
+  "main": "src/main/main.cjs",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test --test-concurrency=1 tests/*.test.cjs",
+    "sync:frontend": "node scripts/sync-frontend.cjs",
+    "verify:frontend": "node scripts/verify-frontend.cjs",
+    "verify:snapshot": "node scripts/verify-engine-snapshot.cjs",
+    "pack:check": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Pack-Windows.ps1 -ValidateOnly",
+    "pack:win": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Pack-Windows.ps1"
+  },
+  "devDependencies": {
+    "@electron/packager": "20.3.0",
+    "electron": "43.4.0"
+  }
+}

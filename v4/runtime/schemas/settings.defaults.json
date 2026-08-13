@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "theme": "system",
+  "reduceMotion": false,
+  "progressColors": ["#4A6CF7", "#8B5CF6", "#22C7A9"],
+  "diagnosticConcurrency": 2,
+  "logBatchSize": 64,
+  "logMemoryLimitBytes": 1048576,
+  "autoCloseAfterRepair": false,
+  "autoCloseAfterRepairExplicit": false,
+  "social": {
+    "enabled": true,
+    "accounts": { "tibo": true, "openai": true, "chatgpt": true },
+    "maxPosts": 4,
+    "hours": 48,
+    "useJinaFallback": true,
+    "locale": "zh"
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "winbridge://schemas/social-translation-v1",
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "status", "postId", "targetLocale", "text"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "status": { "const": "translated" },
+        "postId": { "type": "string", "pattern": "^social-[0-9A-F]{32}$" },
+        "targetLocale": { "enum": ["zh", "en", "fr", "es", "ru", "ar"] },
+        "text": { "type": "string", "minLength": 1, "maxLength": 4000 }
+      }
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "status", "postId", "targetLocale", "reason"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "status": { "const": "unavailable" },
+        "postId": { "type": "string", "pattern": "^social-[0-9A-F]{32}$" },
+        "targetLocale": { "enum": ["zh", "en", "fr", "es", "ru", "ar"] },
+        "reason": { "const": "temporarily-unavailable" }
+      }
+    }
+  ]
+}

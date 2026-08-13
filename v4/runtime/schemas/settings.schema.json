@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "winbridge://schemas/settings-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "theme", "reduceMotion", "progressColors", "diagnosticConcurrency", "logBatchSize", "logMemoryLimitBytes", "autoCloseAfterRepair", "autoCloseAfterRepairExplicit", "social"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "theme": { "enum": ["system", "light", "dark"] },
+    "reduceMotion": { "type": "boolean" },
+    "progressColors": { "type": "array", "minItems": 3, "maxItems": 5, "items": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$" } },
+    "diagnosticConcurrency": { "type": "integer", "minimum": 1, "maximum": 4 },
+    "logBatchSize": { "type": "integer", "minimum": 16, "maximum": 128 },
+    "logMemoryLimitBytes": { "type": "integer", "minimum": 262144, "maximum": 4194304 },
+    "autoCloseAfterRepair": { "type": "boolean" },
+    "autoCloseAfterRepairExplicit": { "type": "boolean" },
+    "social": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "accounts", "maxPosts", "hours", "useJinaFallback", "locale"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "accounts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tibo", "openai", "chatgpt"],
+          "properties": {
+            "tibo": { "type": "boolean" },
+            "openai": { "type": "boolean" },
+            "chatgpt": { "type": "boolean" }
+          }
+        },
+        "maxPosts": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "hours": { "type": "integer", "minimum": 24, "maximum": 72 },
+        "useJinaFallback": { "type": "boolean" },
+        "locale": { "enum": ["zh", "en", "fr", "es", "ru", "ar"] }
+      }
+    }
+  }
+}

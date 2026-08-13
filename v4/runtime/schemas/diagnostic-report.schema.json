@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "winbridge://schemas/diagnostic-report-v1",
+  "$defs": {
+    "issue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["category", "evidence", "impact", "plannedActions", "risk", "writeScope", "knownIssue", "canSkip", "requiresRestart", "confidence", "suggestionMode"],
+      "properties": {
+        "category": { "enum": ["marketplace-missing-incomplete", "plugin-cache-drift", "latest-pointer", "runtime-node-repl-path", "extension-host-lock", "uninstall-eperm-longpath", "computer-use-connection", "browser-chrome-availability"] },
+        "evidence": { "type": "array", "minItems": 1, "maxItems": 32, "items": { "type": "string" } },
+        "impact": { "type": "string" },
+        "plannedActions": { "type": "array", "maxItems": 32, "items": { "type": "string" } },
+        "risk": { "enum": ["low", "medium", "high", "critical", "unknown"] },
+        "writeScope": { "type": "array", "maxItems": 32, "items": { "type": "string" } },
+        "knownIssue": { "type": ["object", "null"] },
+        "canSkip": { "type": "boolean" },
+        "requiresRestart": { "type": "boolean" },
+        "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+        "suggestionMode": { "enum": ["suggest-repair", "report-only"] }
+      }
+    }
+  },
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "reportId", "createdAt", "engineSnapshot", "issues", "summary", "rawReportPath", "expiresAt"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "reportId": { "type": "string" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "engineSnapshot": { "type": "object" },
+    "issues": { "type": "array", "maxItems": 128, "items": { "$ref": "#/$defs/issue" } },
+    "summary": { "type": "object" },
+    "rawReportPath": { "type": ["string", "null"] },
+    "expiresAt": { "type": "string", "format": "date-time" }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "winbridge://schemas/social-feed-v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "available", "degraded", "reason", "fetchedAt", "cacheAgeSeconds", "locale", "failedAccounts", "posts"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "available": { "type": "boolean" },
+    "degraded": { "type": "boolean" },
+    "reason": {
+      "type": ["string", "null"],
+      "enum": [null, "disabled", "temporarily-unavailable", "partial-online-result", "cached-after-online-failure"]
+    },
+    "fetchedAt": { "type": ["string", "null"], "format": "date-time" },
+    "cacheAgeSeconds": { "type": ["integer", "null"], "minimum": 0 },
+    "locale": { "type": ["string", "null"], "enum": [null, "zh", "en", "fr", "es", "ru", "ar"] },
+    "failedAccounts": {
+      "type": "array",
+      "maxItems": 3,
+      "uniqueItems": true,
+      "items": { "enum": ["tibo", "openai", "chatgpt"] }
+    },
+    "posts": {
+      "type": "array",
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["postId", "account", "displayName", "handle", "text", "link", "publishedAt", "timeUnconfirmed", "source"],
+        "properties": {
+          "postId": { "type": "string", "pattern": "^social-[0-9A-F]{32}$" },
+          "account": { "enum": ["tibo", "openai", "chatgpt"] },
+          "displayName": { "enum": ["Tibo", "OpenAI", "ChatGPT"] },
+          "handle": { "enum": ["thsottiaux", "OpenAI", "ChatGPT"] },
+          "text": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "link": { "type": "string", "maxLength": 256 },
+          "publishedAt": { "type": "string", "format": "date-time", "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$" },
+          "timeUnconfirmed": { "const": false },
+          "source": { "enum": ["xxu-rss", "rsshub", "jina"] },
+          "avatarDataUrl": { "type": "string", "maxLength": 262144, "pattern": "^data:image/(png|webp|jpeg);base64," }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "available": { "const": false } } },
+      "then": { "properties": { "posts": { "maxItems": 0 }, "reason": { "enum": ["disabled", "temporarily-unavailable"] } } }
+    }
+  ]
+}
