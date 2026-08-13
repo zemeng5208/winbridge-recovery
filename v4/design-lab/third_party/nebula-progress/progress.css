@@ -1,0 +1,225 @@
+.filters {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+
+/* “进度”筛选使用固定尺寸单列，桌面窗口放大时不继续拉伸。 */
+#capsule-grid.is-progress-single-column {
+  grid-template-columns: 454px;
+  justify-content: center;
+  justify-items: center;
+  row-gap: 18px;
+}
+
+#capsule-grid.is-progress-single-column > .progress-card {
+  grid-column: 1;
+  width: 454px;
+  min-width: 454px;
+  max-width: 454px;
+}
+
+.progress-card {
+  cursor: default;
+}
+
+.progress-card:hover {
+  transform: translateY(-2px);
+}
+
+.progress-stage {
+  --progress: 50;
+  position: relative;
+  display: block;
+  height: 104px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.34);
+  border-radius: 52px;
+  color: #fff;
+  background: #202126;
+  box-shadow: 0 8px 22px rgba(20, 20, 24, 0.09);
+  cursor: ew-resize;
+  touch-action: none;
+  user-select: none;
+  isolation: isolate;
+}
+
+.progress-stage:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.8);
+  outline-offset: 4px;
+}
+
+.progress-wave-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  pointer-events: none;
+  transition: filter 180ms ease, opacity 160ms ease;
+}
+
+.progress-stage.is-dragging .progress-wave-canvas {
+  filter: saturate(1.15) brightness(1.08);
+}
+
+.progress-stage.has-webgl-progress > .progress-wave-canvas:not(.progress-webgl-overlay) {
+  opacity: 0;
+}
+
+.progress-webgl-overlay {
+  z-index: 2;
+}
+
+.progress-copy {
+  position: absolute;
+  top: 50%;
+  left: 30px;
+  z-index: 4;
+  display: flex;
+  max-width: 54%;
+  flex-direction: column;
+  gap: 5px;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.progress-name {
+  font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: 0.10em;
+  white-space: nowrap;
+}
+
+.progress-name sup {
+  margin-left: 2px;
+  font-size: 0.72em;
+}
+
+.progress-subtitle {
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.progress-value {
+  position: absolute;
+  top: 50%;
+  right: 30px;
+  z-index: 5;
+  min-width: 24%;
+  color: #fff;
+  font-size: 44px;
+  font-weight: 480;
+  line-height: 1;
+  text-align: right;
+  letter-spacing: -0.045em;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.24);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
+.progress-drag-label {
+  position: absolute;
+  right: 32px;
+  bottom: 11px;
+  z-index: 5;
+  color: rgba(255, 255, 255, 0.28);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 7px;
+  letter-spacing: 0.18em;
+  opacity: 0;
+  transition: opacity 160ms ease;
+  pointer-events: none;
+}
+
+.progress-stage:hover .progress-drag-label,
+.progress-stage:focus-visible .progress-drag-label,
+.progress-stage.is-dragging .progress-drag-label {
+  opacity: 1;
+}
+
+html.motion-paused .progress-wave-canvas {
+  filter: saturate(0.96);
+}
+
+@media (max-width: 760px) {
+  .filters {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .filter-button {
+    font-size: 10px;
+  }
+
+  #capsule-grid.is-progress-single-column {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    row-gap: 14px;
+  }
+
+  #capsule-grid.is-progress-single-column > .progress-card {
+    width: min(454px, calc(100vw - 36px));
+    min-width: 0;
+    max-width: 454px;
+  }
+
+  .progress-stage {
+    height: 96px;
+    border-radius: 48px;
+  }
+
+  .progress-copy {
+    left: 24px;
+    max-width: 60%;
+  }
+
+  .progress-name {
+    font-size: 18px;
+  }
+
+  .progress-subtitle {
+    max-width: 180px;
+    overflow: hidden;
+    font-size: 7px;
+    text-overflow: ellipsis;
+  }
+
+  .progress-value {
+    right: 24px;
+    font-size: 38px;
+  }
+}
+
+@media (max-width: 390px) {
+  #capsule-grid.is-progress-single-column > .progress-card {
+    width: calc(100vw - 28px);
+  }
+
+  .progress-stage {
+    height: 90px;
+    border-radius: 45px;
+  }
+
+  .progress-copy {
+    left: 20px;
+  }
+
+  .progress-name {
+    font-size: 16px;
+  }
+
+  .progress-subtitle {
+    max-width: 128px;
+  }
+
+  .progress-value {
+    right: 20px;
+    font-size: 34px;
+  }
+}
