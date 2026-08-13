@@ -34,5 +34,4 @@ Use the `v4-development` branch as the integration base. Create a focused branch
 - Runtime tests: 74 passed, 0 failed.
 - Frontend integrity verification: passed.
 - Frozen 3.1.1 snapshot verification: passed.
-- Packaging input validation: passed; no package was created.
-
+- Packaging input validation passed in the isolated development workspace. In the public-tree recheck, `npm ci` did not install the Electron runtime binary on this host, so its fresh `pack:check` stopped at that missing dependency. No package was created or attached.
