@@ -1,0 +1,59 @@
+name: Quick feedback / 快速反馈
+description: Tell me in under a minute whether WinBridge worked for you / 用不到一分钟告诉我使用结果
+title: "[Feedback] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying WinBridge Recovery. Success reports are useful too — you do not need to wait until something breaks.
+
+        感谢你尝试 WinBridge Recovery。即使一切正常，也欢迎告诉我；不需要等到出问题才反馈。
+
+        Please do not include passwords, cookies, tokens, API keys, account/session data, private configuration, or other sensitive information.
+
+  - type: dropdown
+    id: result
+    attributes:
+      label: Result / 使用结果
+      description: Pick the closest option / 选择最接近你的情况
+      options:
+        - Worked for me / 已解决问题
+        - Partially worked / 部分解决
+        - Did not work / 没有解决
+        - I found a bug / 我发现了问题
+        - I have a suggestion / 我有建议
+    validations:
+      required: true
+
+  - type: textarea
+    id: feedback
+    attributes:
+      label: What happened? / 发生了什么？
+      description: A single sentence is enough. Screenshots are welcome if they contain no private information. / 写一句话也可以；截图请先确认不含隐私信息。
+      placeholder: "Example: Browser recovered successfully after the latest Desktop update. / 例如：更新 Desktop 后 Browser 已成功恢复。"
+    validations:
+      required: true
+
+  - type: input
+    id: winbridge_version
+    attributes:
+      label: WinBridge version (optional) / WinBridge 版本（可选）
+      placeholder: v3.1.1
+    validations:
+      required: false
+
+  - type: input
+    id: desktop_version
+    attributes:
+      label: Codex Desktop version (optional) / Codex Desktop 版本（可选）
+      placeholder: 26.x.x.x
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy / 隐私
+      options:
+        - label: I checked that this report does not contain credentials, tokens, cookies, session data, or other private information. / 我已确认反馈中不含凭据、Token、Cookie、会话数据或其他隐私信息。
+          required: true
