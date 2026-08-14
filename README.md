@@ -6,6 +6,19 @@ WinBridge Recovery detects and repairs bundled marketplace, plugin cache, `lates
 
 > Independent, non-commercial student project. Not affiliated with, sponsored by, or endorsed by OpenAI. Third-party names are used only to identify compatibility. No third-party logos or official application/plugin files are redistributed.
 
+## Feedback
+
+**Tried WinBridge Recovery? Please tell me what happened — success reports are useful too.**
+
+- [Quick feedback: worked / partly worked / did not work](https://github.com/zemeng5208/winbridge-recovery/issues/new?template=quick_feedback.yml)
+- [Report a bug](https://github.com/zemeng5208/winbridge-recovery/issues/new?template=bug_report.yml)
+- [Request a feature](https://github.com/zemeng5208/winbridge-recovery/issues/new?template=feature_request.yml)
+- [Ask a question](https://github.com/zemeng5208/winbridge-recovery/issues/new?template=question.yml)
+
+A one-sentence report is enough. If WinBridge solved your problem, saying so helps validate the recovery path; if it did not, even a short description helps identify what should be fixed next. If you find the project useful, a GitHub Star also helps other users discover it.
+
+Please do **not** post passwords, cookies, tokens, API keys, account/session data, private configuration, or unredacted private paths/logs.
+
 ## Project history
 
 WinBridge Recovery is the current maintained implementation of an earlier public, script-based project: **[Codex Desktop Plugin Repair Safety Kit](https://github.com/zemeng5208/codex-desktop-plugin-repair-safety-kit)**.
