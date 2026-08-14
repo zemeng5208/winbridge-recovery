@@ -1,5 +1,8 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Project blog and comments / 项目博客与评论
+    url: https://zemeng5208-blog.nydiaruby20101986rvz.chatgpt.site
+    about: Read development notes or leave a lighter-weight comment before opening a formal issue. / 查看开发日志，或先在博客评论区留下简短反馈。
   - name: Security and privacy guidance
     url: https://github.com/zemeng5208/winbridge-recovery/blob/main/SECURITY.md
     about: Read this before reporting anything that may contain sensitive data or security implications.
