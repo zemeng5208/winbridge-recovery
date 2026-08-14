@@ -6,6 +6,19 @@
 
 > 本项目是学生独立开发的非商业社区测试项目，与 OpenAI 无隶属、赞助或认可关系。第三方名称仅用于说明兼容对象；项目不包含第三方品牌图标，也不重新分发官方应用或插件文件。
 
+## 反馈与问题报告
+
+**如果你已经尝试过 WinBridge Recovery，欢迎告诉我结果——即使成功了，也非常有价值。**
+
+- [快速反馈：已解决 / 部分解决 / 没有解决](https://github.com/zemeng5208/winbridge-recovery/issues/new?template=quick_feedback.yml)
+- [报告 Bug](https://github.com/zemeng5208/winbridge-recovery/issues/new?template=bug_report.yml)
+- [提出功能建议](https://github.com/zemeng5208/winbridge-recovery/issues/new?template=feature_request.yml)
+- [提问](https://github.com/zemeng5208/winbridge-recovery/issues/new?template=question.yml)
+
+**只写一句话也可以。** 如果 WinBridge 成功解决了问题，你的成功反馈可以帮助确认当前修复路径是否可靠；如果没有解决，哪怕只描述一句现象，也能帮助我判断下一步该修哪里。如果这个项目对你有帮助，也欢迎留下一个 GitHub Star，让更多遇到同类问题的人更容易找到它。
+
+请不要在 Issue 中提交密码、Cookie、Token、API Key、账号或会话数据、私人配置、未脱敏的私人路径或完整敏感日志。
+
 ## 项目沿革
 
 WinBridge Recovery 是早期公开脚本项目 **[Codex Desktop Plugin Repair Safety Kit](https://github.com/zemeng5208/codex-desktop-plugin-repair-safety-kit)** 的当前维护实现。
