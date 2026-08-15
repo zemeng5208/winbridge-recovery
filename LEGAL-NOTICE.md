@@ -7,6 +7,8 @@ WinBridge Recovery is an independent, non-commercial student project created for
 - Third-party names appear only where reasonably necessary to describe compatibility or identify a local technical path, process, package, or interface.
 - This project uses its own name and original visual identity. It does not include or claim ownership of third-party logos, application binaries, plugin packages, or other proprietary assets.
 - The installer does not redistribute the official Desktop application or bundled plugins. Repairs are reconstructed from the official package already installed on the user's own computer.
+- WinBridge does not claim access to, ownership of, or a supported ability to reconstruct hidden model context, internal Computer Use/CUA task state, internal execution cursors, or proprietary task-session checkpoints.
+- WinBridge does not promise restoration of an interrupted Computer Use/Browser page, action history, or exact-step task continuation. Those capabilities are explicitly outside the current project scope; see `SCOPE-AND-LIMITATIONS.md`.
 - The author currently provides this project without charge and does not intend to monetize third-party trademarks or software.
 - Permission to test or modify this project's original source code does not grant rights to third-party software or trademarks.
 - This notice is a good-faith statement of purpose, not a substitute for a trademark or copyright license and not legal advice.
