@@ -6,6 +6,8 @@ body:
     attributes:
       value: |
         Thanks for helping improve WinBridge Recovery. Please do not upload passwords, cookies, tokens, API keys, session databases, full private configuration files, or other sensitive data.
+
+        Scope note: WinBridge repairs plugin/runtime infrastructure. Failure to restore a previously interrupted Computer Use/Browser page, action history, hidden Agent/CUA execution state, changed-file task history, or exact execution step is not by itself a WinBridge repair bug. Those capabilities are intentionally outside the current roadmap; see SCOPE-AND-LIMITATIONS.md.
   - type: input
     id: winbridge_version
     attributes:
@@ -79,4 +81,6 @@ body:
         - label: I removed credentials, tokens, cookies, session data, and other private information from this report.
           required: true
         - label: I understand WinBridge Recovery does not bypass enterprise or browser security policies.
+          required: true
+        - label: I understand that exact Computer Use/Browser task checkpoint restoration and exact-step session resumption are outside WinBridge Recovery's current scope.
           required: true
