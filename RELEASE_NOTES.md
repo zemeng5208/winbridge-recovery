@@ -1,5 +1,15 @@
 # WinBridge Recovery v3.1.1
 
+## Scope clarification — 2026-08-15
+
+- Clarified that WinBridge Recovery repairs plugin/runtime infrastructure state; it is not a Computer Use, Browser, or Agent task-checkpoint system.
+- WinBridge does not restore the last clicked/viewed page, reconstruct click/action or screenshot trails, recover unsaved editor state, identify the exact files changed by a previous Agent task, or resume the original task from the exact interrupted step.
+- WinBridge does not read, reconstruct, replay, or write back hidden model context, Agent plans, internal Computer Use/CUA run state, or an internal execution cursor.
+- A background screen/activity/key recorder is intentionally not being added as a partial substitute because it cannot guarantee exact task resumption and would materially expand privacy, permission, security, storage, and maintenance scope.
+- Task/session checkpoint recovery is therefore explicitly outside the current roadmap unless a stable, supported interface becomes available that permits reliable recovery without weakening the project's privacy and safety model.
+- This is a documentation/scope clarification only; the v3.1.1 repair core and distributed binaries are unchanged.
+- See `SCOPE-AND-LIMITATIONS.md` for the complete policy.
+
 ## Maintenance update
 
 - Fixed in-app update discovery when the newest GitHub release is marked as a prerelease.
