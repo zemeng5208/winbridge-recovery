@@ -6,6 +6,8 @@ body:
     attributes:
       value: |
         Use this form for questions that are not clearly bugs or feature requests. Do not include passwords, cookies, tokens, API keys, session data, private configuration files, or other sensitive information.
+
+        WinBridge Recovery restores plugin/runtime infrastructure state. It does not restore the last Computer Use/Browser page, click/action history, hidden Agent/CUA execution state, or the original task from an exact interrupted step. Those capabilities are intentionally outside the current roadmap; see SCOPE-AND-LIMITATIONS.md.
   - type: dropdown
     id: topic
     attributes:
@@ -20,6 +22,7 @@ body:
         - Diagnosis / recovery behavior
         - Backup / rollback
         - Build from source
+        - Project scope / limitations
         - Other
     validations:
       required: true
