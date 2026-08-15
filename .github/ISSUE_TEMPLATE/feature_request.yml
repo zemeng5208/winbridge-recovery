@@ -6,6 +6,8 @@ body:
     attributes:
       value: |
         Feature requests are welcome. Please focus on recovery, diagnostics, compatibility, safety, packaging, or user experience for the Windows Codex Desktop workflow.
+
+        Scope note: WinBridge Recovery is a plugin/runtime recovery tool, not a Computer Use/Browser task-checkpoint system. Requests to restore the last clicked/viewed page, reconstruct action/screenshot history, recover hidden Agent/CUA execution state, or resume the original task from the exact interrupted step are intentionally outside the current roadmap. WinBridge also does not plan to add background screen/key/activity recording as a partial substitute. See SCOPE-AND-LIMITATIONS.md.
   - type: textarea
     id: problem
     attributes:
@@ -35,4 +37,6 @@ body:
         - label: This request does not require redistributing official OpenAI/Codex application or plugin payloads.
           required: true
         - label: This request does not ask WinBridge Recovery to bypass enterprise, browser, or account security controls.
+          required: true
+        - label: I understand that restoring internal Computer Use/Browser task checkpoints, exact action history, or exact-step session resumption is outside the current WinBridge Recovery roadmap.
           required: true
