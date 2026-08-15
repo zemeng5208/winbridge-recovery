@@ -9,6 +9,10 @@ body:
 
         感谢你尝试 WinBridge Recovery。即使一切正常，也欢迎告诉我；不需要等到出问题才反馈。
 
+        In this project, “recovered” means the affected plugin/runtime surface became usable again. It does not mean WinBridge restored a previously interrupted Computer Use/Browser page, action history, hidden task state, or exact execution step. Task/session checkpoint recovery is intentionally outside the current roadmap; see SCOPE-AND-LIMITATIONS.md.
+
+        在本项目中，“恢复成功”指相关插件/运行时重新可用，不代表 WinBridge 恢复了之前中断的 Computer Use/Browser 页面、点击/动作历史、隐藏任务状态或精确执行步骤。任务/会话断点恢复明确不在当前路线图内，详见 SCOPE-AND-LIMITATIONS.md。
+
         Prefer a lighter-weight conversation? You can also read the development notes and comment on the project blog:
         https://zemeng5208-blog.nydiaruby20101986rvz.chatgpt.site
 
