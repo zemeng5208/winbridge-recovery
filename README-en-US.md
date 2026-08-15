@@ -6,6 +6,28 @@ WinBridge Recovery detects and repairs bundled marketplace, plugin cache, `lates
 
 > Independent, non-commercial student project. Not affiliated with, sponsored by, or endorsed by OpenAI. Third-party names are used only to identify compatibility. No third-party logos or official application/plugin files are redistributed.
 
+## Explicitly not supported: task/session checkpoint recovery
+
+WinBridge Recovery restores **plugin/runtime infrastructure state**. It is not a Computer Use, Browser, or Agent task-execution checkpoint system.
+
+The project intentionally does **not** implement or promise any of the following:
+
+- restoring the last page Computer Use or Browser clicked or viewed before an interruption;
+- reconstructing a click/action trail, screenshot trail, or exact UI step sequence;
+- identifying or restoring the exact project files changed as part of a previous Agent task;
+- recovering unsaved editor buffers or application-specific undo state;
+- reading, reconstructing, replaying, or writing back hidden model context, Agent plans, internal Computer Use/CUA run state, or an internal execution cursor;
+- resuming the original Computer Use/Browser task from the exact interrupted step after plugin repair;
+- running a background screen recorder, key logger, activity recorder, or broad work-context recorder as an approximation of those capabilities.
+
+A file that was already saved before a plugin failure may remain on disk in its saved state. WinBridge does not treat that as task-state recovery and does not infer what the Agent intended to do next.
+
+The reason is deliberate: WinBridge Recovery is an independent external project and currently has no supported interface that can reliably read and write the complete internal execution state of the official Desktop Computer Use/Browser task runtime. A partial external recorder would still not honestly guarantee exact-step task resumption and would materially expand privacy exposure, permissions, security review, storage, and maintenance cost.
+
+For those reasons, **task/session checkpoint recovery is intentionally not on the WinBridge Recovery roadmap**. This boundary will only be reconsidered if a stable, supported interface becomes available that makes reliable recovery possible without weakening the project's privacy and safety model.
+
+See [SCOPE-AND-LIMITATIONS.md](SCOPE-AND-LIMITATIONS.md) for the complete boundary.
+
 ## Feedback
 
 **Tried WinBridge Recovery? Please tell me what happened — success reports are useful too.**
@@ -46,6 +68,7 @@ The predecessor repository is intentionally preserved rather than merged or rewr
 
 - Does not take ownership of or patch `C:\Program Files\WindowsApps`.
 - Does not bundle credentials, passwords, cookies, tokens, API keys, sessions, logs, or private keys.
+- Does not record or restore Computer Use/Browser task click trails, work context, hidden execution context, or internal session checkpoints.
 - Does not bypass enterprise or browser security policy decisions.
 - Writes only to documented installation, backup, and required Codex user-state locations.
 - Uninstall removes only files owned by the installation manifest, not an arbitrary selected parent directory.
@@ -82,6 +105,12 @@ The mirror must proxy the original release URL. It is tried first and the offici
 
 The public activity view is opt-in after a successful connectivity probe. If all configured public RSS/reader sources are unavailable, the setting and entry are hidden. Cached posts may still be shown when available. Translation follows the selected interface language and currently targets the six UN official languages.
 
+## Verification meaning
+
+A successful static check does not prove all three plugin surfaces are available at runtime. Browser, Chrome, and Computer Use should still be validated independently with a real interaction.
+
+A successful repair or validation means the plugin/runtime surface is usable again. It does **not** mean that a previously interrupted page, click trail, task context, or original Computer Use session has been restored.
+
 ## Build
 
 ```powershell
@@ -90,4 +119,4 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Installer\Build-Instal
 
 The optional self-signed test certificate is not publicly trusted. Verify the SHA-256 published with each release.
 
-See [README-zh-CN.md](README-zh-CN.md), [LEGAL-NOTICE.md](LEGAL-NOTICE.md), and [SECURITY.md](SECURITY.md).
+See [SCOPE-AND-LIMITATIONS.md](SCOPE-AND-LIMITATIONS.md), [README.md](README.md), [LEGAL-NOTICE.md](LEGAL-NOTICE.md), and [SECURITY.md](SECURITY.md).
