@@ -6,6 +6,28 @@
 
 > 本项目是学生独立开发的非商业社区测试项目，与 OpenAI 无隶属、赞助或认可关系。第三方名称仅用于说明兼容对象；项目不包含第三方品牌图标，也不重新分发官方应用或插件文件。
 
+## 明确不支持：会话与任务断点恢复
+
+WinBridge Recovery 恢复的是**插件/运行时基础设施状态**，不是 Computer Use、Browser 或 Agent 的任务执行现场。
+
+本项目明确且有意地**不实现、不承诺**以下能力：
+
+- 恢复 Computer Use 或 Browser 中断前最后点击、最后查看的页面；
+- 重建完整点击轨迹、动作轨迹、截图轨迹或精确 UI 操作步骤；
+- 判断或恢复某次 Agent 任务中究竟修改了哪些项目文件；
+- 恢复编辑器尚未保存的缓冲区或应用自身的撤销状态；
+- 读取、重建、重放或写回模型隐藏上下文、Agent 内部计划、Computer Use/CUA 内部 run state 或执行游标；
+- 在插件修好后让原 Computer Use/Browser 任务从中断的精确步骤无缝继续；
+- 通过后台录屏、键盘记录、活动记录或大范围“工作现场记录器”去近似实现上述能力。
+
+如果某个文件在插件故障前已经保存到磁盘，它通常仍会保持当时已保存的状态；但 WinBridge 不把这视为任务状态恢复，也不会据此猜测 Agent 下一步原本准备做什么。
+
+原因很明确：WinBridge Recovery 是独立的外部项目，目前没有一个受支持的接口可以可靠读取并写回官方 Desktop Computer Use/Browser 任务运行时的完整内部执行状态。只做外部活动记录也无法诚实保证“原任务从精确中断点继续”，同时会显著扩大隐私、权限、安全和维护成本。
+
+因此，**任务/会话断点恢复目前明确不进入 WinBridge Recovery 路线图**。只有未来出现稳定、受支持的接口，并且能够在不破坏本项目隐私与安全边界的前提下实现可靠恢复时，才会重新评估这一决定。
+
+完整说明见 [SCOPE-AND-LIMITATIONS.md](SCOPE-AND-LIMITATIONS.md)。
+
 ## 反馈与问题报告
 
 **如果你已经尝试过 WinBridge Recovery，欢迎告诉我结果——即使成功了，也非常有价值。**
@@ -47,6 +69,7 @@ WinBridge Recovery 是早期公开脚本项目 **[Codex Desktop Plugin Repair Sa
 
 - 不接管或修改 `C:\Program Files\WindowsApps` 的所有权。
 - 不携带账号、密码、Cookie、Token、API Key、会话数据库、用户日志或私钥。
+- 不记录或恢复 Computer Use/Browser 的任务点击轨迹、工作现场、隐藏执行上下文或内部会话断点。
 - 不绕过 Browser 的企业网络或安全策略决定。
 - 修复来源仅为目标电脑当前安装的官方包；安装包本身不内置官方插件副本。
 - 只写入文档中列明的安装目录、备份目录和修复操作所需的 Codex 用户状态位置。
@@ -93,6 +116,8 @@ mirror_prefix=https://example.invalid/
 
 三个表面不能互相替代。若 Browser 明确返回企业网络或安全策略拒绝，应停止尝试，本工具不会绕过该策略。
 
+这里的“验证通过”仅表示插件重新具备可用性，不表示之前中断的页面、点击轨迹、任务上下文或原 Computer Use 会话已经恢复。
+
 ## 从源码构建
 
 需要 Windows 11、Windows PowerShell 5.1 和系统自带 .NET Framework CodeDOM：
@@ -107,4 +132,4 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Installer\Build-Instal
 
 卸载器只删除自身清单确认拥有的 `WinBridge-Recovery` 程序目录、快捷方式和卸载注册项，不递归删除用户选择的父目录。默认保留恢复备份，也不会删除官方 Desktop、用户会话或其他 MCP 配置。
 
-详见 [LEGAL-NOTICE.md](LEGAL-NOTICE.md)、[SECURITY.md](SECURITY.md) 和 [TESTING-NOTICE.md](TESTING-NOTICE.md)。
+详见 [SCOPE-AND-LIMITATIONS.md](SCOPE-AND-LIMITATIONS.md)、[LEGAL-NOTICE.md](LEGAL-NOTICE.md)、[SECURITY.md](SECURITY.md) 和 [TESTING-NOTICE.md](TESTING-NOTICE.md)。
