@@ -17,6 +17,10 @@ $uninstallBinary = Join-Path $installerRoot 'WinBridgeUninstall.exe'
 $icon = Join-Path $projectRoot 'LauncherUI\Assets\WinBridge.ico'
 $signingRoot = Join-Path $installerRoot 'Signing'
 $publicCertificate = Join-Path $signingRoot 'zemeng5208-Test-Code-Signing.cer'
+$displayVersion = '4.0.0-preview.1'
+$assemblyVersion = '4.0.0.0'
+$versionedSource = Join-Path $stageRoot 'WinBridgeSetup.versioned.cs'
+$versionedUninstallSource = Join-Path $stageRoot 'WinBridgeUninstall.versioned.cs'
 
 function Get-ProjectSigningCertificate {
   $now = Get-Date
@@ -41,7 +45,41 @@ function Set-ProjectSignature([string]$Path, $Certificate) {
   Write-Host "Signed: $Path"
 }
 
+function Write-VersionedSource {
+  param(
+    [Parameter(Mandatory = $true)][string]$SourcePath,
+    [Parameter(Mandatory = $true)][string]$DestinationPath,
+    [Parameter(Mandatory = $true)][hashtable]$Replacements
+  )
+
+  $text = [System.IO.File]::ReadAllText($SourcePath)
+  foreach ($entry in $Replacements.GetEnumerator()) {
+    if (-not $text.Contains([string]$entry.Key)) {
+      throw "Version stamp token was not found in $SourcePath: $($entry.Key)"
+    }
+    $text = $text.Replace([string]$entry.Key, [string]$entry.Value)
+  }
+  [System.IO.File]::WriteAllText(
+    $DestinationPath,
+    $text,
+    (New-Object System.Text.UTF8Encoding($false)))
+}
+
 try {
+  New-Item -ItemType Directory -Path $stageRoot -Force | Out-Null
+
+  Write-VersionedSource -SourcePath $source -DestinationPath $versionedSource -Replacements @{
+    'AssemblyVersion("3.1.1.0")' = ('AssemblyVersion("' + $assemblyVersion + '")')
+    'AssemblyFileVersion("3.1.1.0")' = ('AssemblyFileVersion("' + $assemblyVersion + '")')
+    '"version=3.1.1"' = ('"version=' + $displayVersion + '"')
+    'key.SetValue("DisplayVersion", "3.1.1");' = ('key.SetValue("DisplayVersion", "' + $displayVersion + '");')
+    'A self-contained installer for Windows 11. Choose where the app and its backups are stored.' = 'WinBridge 4.0 preview with Windows 10/11 host checks and safer recovery diagnostics.'
+  }
+  Write-VersionedSource -SourcePath $uninstallSource -DestinationPath $versionedUninstallSource -Replacements @{
+    'AssemblyVersion("3.1.1.0")' = ('AssemblyVersion("' + $assemblyVersion + '")')
+    'AssemblyFileVersion("3.1.1.0")' = ('AssemblyFileVersion("' + $assemblyVersion + '")')
+  }
+
   & (Join-Path $projectRoot 'LauncherUI\Build-LauncherUI.ps1')
   $signingCertificate = Get-ProjectSigningCertificate
   Set-ProjectSignature (Join-Path $projectRoot 'LauncherUI\WinBridgeRecovery.exe') $signingCertificate
@@ -60,7 +98,7 @@ try {
   try {
     $uninstallResult = $uninstallProvider.CompileAssemblyFromFile(
       $uninstallParameters,
-      $uninstallSource)
+      $versionedUninstallSource)
   } finally {
     $uninstallProvider.Dispose()
   }
@@ -135,7 +173,7 @@ try {
 
   $provider = New-Object Microsoft.CSharp.CSharpCodeProvider
   try {
-    $result = $provider.CompileAssemblyFromFile($parameters, $source)
+    $result = $provider.CompileAssemblyFromFile($parameters, $versionedSource)
   } finally {
     $provider.Dispose()
   }
@@ -153,6 +191,7 @@ try {
     ($hash + '  ' + [System.IO.Path]::GetFileName($OutputPath) + [Environment]::NewLine),
     (New-Object System.Text.UTF8Encoding($false)))
   Write-Host "Installer: $OutputPath"
+  Write-Host "Version: $displayVersion"
   Write-Host "SHA256: $hash"
   Write-Host "SHA256 file: $hashSidecar"
   Write-Host "Size: $((Get-Item -LiteralPath $OutputPath).Length) bytes"
