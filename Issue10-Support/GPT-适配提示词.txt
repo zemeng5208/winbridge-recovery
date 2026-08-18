@@ -1,0 +1,43 @@
+你现在要帮我适配 WinBridge Recovery 的脚本，但这是公司电脑，存在加密 / DLP / EDR / 终端安全软件。
+
+请先阅读我提供的整个 WinBridge 源码目录、Issue #10 的原始报错日志，以及公司安全软件的名称/截图。不要先让我运行原版修复脚本。
+
+当前已知失败点：
+%USERPROFILE%\.codex\plugins\cache\openai-bundled\chrome
+Install-DirectoryAtomically -> Move-Item / rename -> Access Denied
+
+你的任务：
+1. 先审查脚本和日志，判断最可能是：
+   - Codex / extension-host / node / CUA 等普通文件锁；
+   - 公司透明加密、DLP、EDR、应用控制或文件系统 minifilter；
+   - ACL / Owner / DELETE / DELETE_CHILD 权限；
+   - reparse point / junction；
+   - WinBridge 自身句柄未释放；
+   - 其他 Windows rename/move 限制。
+2. 先运行或让我运行 Issue10-Support\Diagnose-WinBridge-Lock.ps1，并分析输出。
+3. 如果需要修改 WinBridge，只做针对这台机器环境的最小改动，并先展示 diff/修改点，再让我运行。
+4. 优先增加：更精确的锁拥有者诊断、公司安全软件/minifilter识别、受控等待/重试、明确失败提示、安全退出。
+5. 如果检测到公司安全策略明确阻止该操作，停止自动修复并告诉我联系公司 IT/安全管理员，不要尝试绕过。
+
+绝对不要：
+- 禁用、卸载、杀掉或绕过公司 EDR/DLP/透明加密软件；
+- 关闭安全驱动或修改其策略；
+- takeown 整个 .codex；
+- icacls /reset 整个 .codex；
+- 强删 .codex；
+- 修改 C:\Program Files\WindowsApps 的所有权/ACL；
+- 结束所有 node.exe；
+- 删除 Recovery Backup；
+- 去掉哈希校验、原子切换、回滚、安全检查；
+- 通过注入、驱动、Hook、内核方式规避公司安全控制。
+
+运行顺序必须是：
+A. 先审查整个源码 + 日志；
+B. 先只读诊断；
+C. 给出最小修改和 diff；
+D. 我确认后保存修改；
+E. 完全退出 ChatGPT/Codex Desktop、Chrome、Edge；
+F. 先运行 DIAGNOSE-ONLY.cmd；
+G. 只有诊断正常且没有公司策略阻止时，再运行 START-BEFORE-DESKTOP.cmd。
+
+如果仍失败，请保留最新 Logs\run-*.log、Issue10-Diagnosis-*.txt 和 Recovery Backup，不要做破坏性清理。
