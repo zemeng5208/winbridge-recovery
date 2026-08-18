@@ -14,9 +14,11 @@ $sourceMaintenance = Join-Path $PSScriptRoot 'Maintain-Launcher-State.ps1'
 $runtimeMaintenance = Join-Path $PSScriptRoot 'Maintain-Launcher-State.runtime.ps1'
 $pointerHelper = Join-Path $PSScriptRoot 'Repair-BrowserLatest.ps1'
 $auditHelper = Join-Path $PSScriptRoot 'Audit-Launcher-Writes.ps1'
+$accessGuard = Join-Path $PSScriptRoot 'WinBridge-4.0-AccessGuard.ps1'
 $storageConfig = Join-Path $PSScriptRoot 'Config\storage.ini'
 $exitCode = 1
 $auditStarted = $false
+$coreStarted = $false
 
 function Read-StorageConfiguration {
   $values = @{}
@@ -86,6 +88,41 @@ function Write-ConfiguredCopy {
   }
 }
 
+function Invoke-AccessGuard {
+  param(
+    [ValidateSet('Preflight', 'Diagnose', 'PostFailure')]
+    [string]$GuardMode,
+    [switch]$BlockOnRisk
+  )
+
+  if (-not (Test-Path -LiteralPath $accessGuard -PathType Leaf)) {
+    Write-Output '[WARN] WinBridge 4.0 Access Guard is missing; continuing with the existing core safety checks.'
+    return
+  }
+
+  Write-Output ('[INFO] Running WinBridge 4.0 Access Guard: {0}' -f $GuardMode)
+  & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $accessGuard `
+    -Mode $GuardMode -LauncherRoot $PSScriptRoot
+  $guardExitCode = $LASTEXITCODE
+
+  if ($BlockOnRisk) {
+    if ($guardExitCode -eq 20) {
+      throw 'Access Guard stopped repair because ChatGPT/Codex Desktop is still running. Close it completely and run WinBridge again.'
+    }
+    if ($guardExitCode -eq 21) {
+      throw 'Access Guard stopped repair because Restart Manager reported a process holding a repair target open. Review the generated access-guard report before retrying.'
+    }
+    if ($guardExitCode -eq 22) {
+      Write-Output '[WARN] Access Guard could not complete the full preflight. The existing WinBridge core safety checks will still run.'
+      return
+    }
+  }
+
+  if ($guardExitCode -ne 0) {
+    Write-Output ('[WARN] Access Guard returned exit code {0}; continuing because this mode is diagnostic-only.' -f $guardExitCode)
+  }
+}
+
 try {
   $backupRoot = Read-StorageConfiguration
   $escapedBackupRoot = $backupRoot.Replace("'", "''")
@@ -104,6 +141,12 @@ try {
     -Replacement ("`$backupRoot = '" + $escapedBackupRoot + "'")
 
   Write-Output ('[INFO] Configured backup root: {0}' -f $backupRoot)
+
+  if ($Mode -eq 'RepairAndLaunch') {
+    Invoke-AccessGuard -GuardMode Preflight -BlockOnRisk
+  } elseif ($Mode -eq 'DiagnoseOnly') {
+    Invoke-AccessGuard -GuardMode Diagnose
+  }
 
   if ($Mode -eq 'RepairAndLaunch' -and
       (Test-Path -LiteralPath $auditHelper -PathType Leaf)) {
@@ -124,6 +167,7 @@ try {
     }
   }
 
+  $coreStarted = $true
   & powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File $runtimeCore -Mode $Mode -NoPause
   $coreExitCode = $LASTEXITCODE
   if ($coreExitCode -ne 0) {
@@ -155,6 +199,14 @@ try {
   $exitCode = 0
 } catch {
   Write-Output ('[ERROR] Configured launcher failed: {0}' -f $_.Exception.Message)
+  if ($coreStarted -and (Test-Path -LiteralPath $accessGuard -PathType Leaf)) {
+    try {
+      Invoke-AccessGuard -GuardMode PostFailure
+      Write-Output '[INFO] A post-failure Access Guard report was generated. Review it together with the run log.'
+    } catch {
+      Write-Output ('[WARN] Post-failure Access Guard collection failed: {0}' -f $_.Exception.Message)
+    }
+  }
   $exitCode = 1
 } finally {
   if ($auditStarted -and (Test-Path -LiteralPath $auditHelper -PathType Leaf)) {
