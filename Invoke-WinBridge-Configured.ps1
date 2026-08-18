@@ -88,6 +88,94 @@ function Write-ConfiguredCopy {
   }
 }
 
+function Apply-V4RuntimePatches {
+  param([Parameter(Mandatory = $true)][string]$Path)
+
+  if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+    throw "Runtime core is missing before 4.0 patching: $Path"
+  }
+
+  $text = [System.IO.File]::ReadAllText($Path)
+  $installMarker = 'function Install-DirectoryAtomically {'
+  $installMarkerCount = [regex]::Matches($text, [regex]::Escape($installMarker)).Count
+  if ($installMarkerCount -ne 1) {
+    throw "WinBridge 4.0 runtime patch expected one Install-DirectoryAtomically function; found $installMarkerCount."
+  }
+
+  $retryHelper = @'
+function Invoke-V4MoveItemWithRetry {
+  param(
+    [Parameter(Mandatory = $true)][string]$Source,
+    [Parameter(Mandatory = $true)][string]$Destination,
+    [string]$Operation = 'atomic directory move',
+    [ValidateRange(1, 10)][int]$Attempts = 6
+  )
+
+  $delays = @(250, 500, 1000, 1500, 2500)
+  for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+    try {
+      Move-Item -LiteralPath $Source -Destination $Destination -ErrorAction Stop
+      if ($attempt -gt 1) {
+        Write-Log ("WinBridge 4.0 retry succeeded for {0} on attempt {1}/{2}." -f $Operation, $attempt, $Attempts) 'OK'
+      }
+      return
+    } catch {
+      if ($attempt -ge $Attempts) {
+        Write-Log ("WinBridge 4.0 retry exhausted for {0}: {1}" -f $Operation, $_.Exception.Message) 'ERROR'
+        throw
+      }
+      $delayIndex = [Math]::Min($attempt - 1, $delays.Count - 1)
+      $delay = [int]$delays[$delayIndex]
+      Write-Log ("WinBridge 4.0 transient move failure for {0} (attempt {1}/{2}): {3}. Retrying in {4} ms." -f $Operation, $attempt, $Attempts, $_.Exception.Message, $delay) 'WARN'
+      Start-Sleep -Milliseconds $delay
+    }
+  }
+}
+
+'@
+
+  $text = $text.Replace($installMarker, $retryHelper + $installMarker)
+
+  $replacements = @(
+    [pscustomobject]@{
+      Old = 'Move-Item -LiteralPath $TargetDirectory -Destination $old'
+      New = "Invoke-V4MoveItemWithRetry -Source `$TargetDirectory -Destination `$old -Operation 'target-to-old swap'"
+      Expected = 1
+    },
+    [pscustomobject]@{
+      Old = 'Move-Item -LiteralPath $PreparedDirectory -Destination $TargetDirectory'
+      New = "Invoke-V4MoveItemWithRetry -Source `$PreparedDirectory -Destination `$TargetDirectory -Operation 'prepared-to-target swap'"
+      Expected = 1
+    },
+    [pscustomobject]@{
+      Old = 'Move-Item -LiteralPath $old -Destination $TargetDirectory'
+      New = "Invoke-V4MoveItemWithRetry -Source `$old -Destination `$TargetDirectory -Operation 'swap rollback restore'"
+      Expected = 1
+    },
+    [pscustomobject]@{
+      Old = 'Move-Item -LiteralPath $TargetPath -Destination $old'
+      New = "Invoke-V4MoveItemWithRetry -Source `$TargetPath -Destination `$old -Operation 'atomic removal staging'"
+      Expected = 1
+    },
+    [pscustomobject]@{
+      Old = 'Move-Item -LiteralPath $record.old -Destination $record.target'
+      New = "Invoke-V4MoveItemWithRetry -Source `$record.old -Destination `$record.target -Operation 'automatic directory rollback'"
+      Expected = 1
+    }
+  )
+
+  foreach ($replacement in $replacements) {
+    $count = [regex]::Matches($text, [regex]::Escape([string]$replacement.Old)).Count
+    if ($count -ne [int]$replacement.Expected) {
+      throw ("WinBridge 4.0 runtime patch expected {0} occurrence(s) of [{1}], found {2}. Refusing to patch an unknown core layout." -f $replacement.Expected, $replacement.Old, $count)
+    }
+    $text = $text.Replace([string]$replacement.Old, [string]$replacement.New)
+  }
+
+  [System.IO.File]::WriteAllText($Path, $text, (New-Object System.Text.UTF8Encoding($true)))
+  Write-Output '[INFO] WinBridge 4.0 runtime patch applied: atomic directory moves use bounded retry without changing the original core script.'
+}
+
 function Invoke-AccessGuard {
   param(
     [ValidateSet('Preflight', 'Diagnose', 'PostFailure')]
@@ -133,6 +221,8 @@ try {
     -Destination $runtimeCore `
     -Pattern '(?m)^\$script:BackupsRoot\s*=\s*''[^'']*''\s*$' `
     -Replacement ("`$script:BackupsRoot = '" + $escapedBackupRoot + "'")
+
+  Apply-V4RuntimePatches -Path $runtimeCore
 
   Write-ConfiguredCopy `
     -Source $sourceMaintenance `
