@@ -20,6 +20,30 @@ $icon = Join-Path $root 'Assets\WinBridge.ico'
 $temporary = Join-Path $root ('WinBridgeRecovery.build-' + [guid]::NewGuid().ToString('N') + '.exe')
 $previousBase = $output + '.previous'
 $previous = $previousBase
+$releaseVersion = '4.0.0-preview.1'
+$assemblyVersion = '4.0.0.0'
+$versionedSource = Join-Path $root ('WinBridgeRecovery.versioned-' + [guid]::NewGuid().ToString('N') + '.cs')
+$versionedUpdateSource = Join-Path $root ('UpdateWindow.versioned-' + [guid]::NewGuid().ToString('N') + '.cs')
+
+function Write-VersionedSource {
+  param(
+    [Parameter(Mandatory = $true)][string]$SourcePath,
+    [Parameter(Mandatory = $true)][string]$DestinationPath,
+    [Parameter(Mandatory = $true)][hashtable]$Replacements
+  )
+
+  $text = [System.IO.File]::ReadAllText($SourcePath)
+  foreach ($entry in $Replacements.GetEnumerator()) {
+    if (-not $text.Contains([string]$entry.Key)) {
+      throw "Version stamp token was not found in $SourcePath: $($entry.Key)"
+    }
+    $text = $text.Replace([string]$entry.Key, [string]$entry.Value)
+  }
+  [System.IO.File]::WriteAllText(
+    $DestinationPath,
+    $text,
+    (New-Object System.Text.UTF8Encoding($false)))
+}
 
 try {
   if (-not (Test-Path -LiteralPath $source -PathType Leaf)) {
@@ -45,6 +69,16 @@ try {
   }
   if (-not (Test-Path -LiteralPath $guardianSource -PathType Leaf)) {
     throw "Guardian source file not found: $guardianSource"
+  }
+
+  Write-VersionedSource -SourcePath $source -DestinationPath $versionedSource -Replacements @{
+    'AssemblyVersion("3.1.1.0")' = ('AssemblyVersion("' + $assemblyVersion + '")')
+    'AssemblyFileVersion("3.1.1.0")' = ('AssemblyFileVersion("' + $assemblyVersion + '")')
+    'WinBridge Recovery 3.1.1' = ('WinBridge Recovery ' + $releaseVersion)
+  }
+  Write-VersionedSource -SourcePath $updateSource -DestinationPath $versionedUpdateSource -Replacements @{
+    'CurrentVersion = "3.1.1"' = ('CurrentVersion = "' + $releaseVersion + '"')
+    'WinBridge-Recovery/3.1.1' = ('WinBridge-Recovery/' + $releaseVersion)
   }
 
   Add-Type -AssemblyName WindowsBase
@@ -79,7 +113,7 @@ try {
   try {
     $result = $provider.CompileAssemblyFromFile(
       $compilerParameters,
-      [string[]]@($source, $minesweeperSource, $socialFeedSource, $advancedSettingsSource, $localizationSource, $updateSource))
+      [string[]]@($versionedSource, $minesweeperSource, $socialFeedSource, $advancedSettingsSource, $localizationSource, $versionedUpdateSource))
   } finally {
     $provider.Dispose()
   }
@@ -151,12 +185,15 @@ try {
   }
   $guardianHash = (Get-FileHash -LiteralPath $guardianOutput -Algorithm SHA256).Hash
   Write-Host "Built: $output"
+  Write-Host "Version: $releaseVersion"
   Write-Host "SHA256: $hash"
   Write-Host "Built: $guardianOutput"
   Write-Host "SHA256: $guardianHash"
 } finally {
-  if (Test-Path -LiteralPath $temporary -PathType Leaf) {
-    Remove-Item -LiteralPath $temporary -Force -ErrorAction SilentlyContinue
+  foreach ($generatedPath in @($temporary, $versionedSource, $versionedUpdateSource)) {
+    if (Test-Path -LiteralPath $generatedPath -PathType Leaf) {
+      Remove-Item -LiteralPath $generatedPath -Force -ErrorAction SilentlyContinue
+    }
   }
   if (Test-Path -LiteralPath $previous -PathType Leaf) {
     Remove-Item -LiteralPath $previous -Force -ErrorAction SilentlyContinue
