@@ -20,7 +20,8 @@ $icon = Join-Path $root 'Assets\WinBridge.ico'
 $temporary = Join-Path $root ('WinBridgeRecovery.build-' + [guid]::NewGuid().ToString('N') + '.exe')
 $previousBase = $output + '.previous'
 $previous = $previousBase
-$releaseVersion = '4.0.0-preview.1'
+$releaseVersion = '4.0.0'
+$displayVersion = '4.0.0-preview.1'
 $assemblyVersion = '4.0.0.0'
 $versionedSource = Join-Path $root ('WinBridgeRecovery.versioned-' + [guid]::NewGuid().ToString('N') + '.cs')
 $versionedUpdateSource = Join-Path $root ('UpdateWindow.versioned-' + [guid]::NewGuid().ToString('N') + '.cs')
@@ -74,11 +75,11 @@ try {
   Write-VersionedSource -SourcePath $source -DestinationPath $versionedSource -Replacements @{
     'AssemblyVersion("3.1.1.0")' = ('AssemblyVersion("' + $assemblyVersion + '")')
     'AssemblyFileVersion("3.1.1.0")' = ('AssemblyFileVersion("' + $assemblyVersion + '")')
-    'WinBridge Recovery 3.1.1' = ('WinBridge Recovery ' + $releaseVersion)
+    'WinBridge Recovery 3.1.1' = ('WinBridge Recovery ' + $displayVersion)
   }
   Write-VersionedSource -SourcePath $updateSource -DestinationPath $versionedUpdateSource -Replacements @{
     'CurrentVersion = "3.1.1"' = ('CurrentVersion = "' + $releaseVersion + '"')
-    'WinBridge-Recovery/3.1.1' = ('WinBridge-Recovery/' + $releaseVersion)
+    'WinBridge-Recovery/3.1.1' = ('WinBridge-Recovery/' + $displayVersion)
   }
 
   Add-Type -AssemblyName WindowsBase
@@ -185,7 +186,7 @@ try {
   }
   $guardianHash = (Get-FileHash -LiteralPath $guardianOutput -Algorithm SHA256).Hash
   Write-Host "Built: $output"
-  Write-Host "Version: $releaseVersion"
+  Write-Host "Version: $displayVersion"
   Write-Host "SHA256: $hash"
   Write-Host "Built: $guardianOutput"
   Write-Host "SHA256: $guardianHash"
