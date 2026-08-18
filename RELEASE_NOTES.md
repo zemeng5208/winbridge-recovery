@@ -1,3 +1,54 @@
+# WinBridge Recovery v4.0 Development
+
+## Access Guard alpha
+
+This development branch now carries the first WinBridge 4.0 access-denied and file-lock hardening work, based on real-world `Move-Item` / `Access Denied` failures reported against the 3.1.1 repair flow.
+
+### New behavior
+
+- Added `WinBridge-4.0-AccessGuard.ps1` as a read-only environment and lock diagnostic layer.
+- `RepairAndLaunch` now runs Access Guard before the repair core starts.
+- The preflight blocks repair when ChatGPT/Codex Desktop is still running, instead of allowing the repair and Desktop to operate on the same plugin/runtime state at the same time.
+- `DiagnoseOnly` runs the same data collection without blocking or modifying the target state.
+- If the repair core starts and later fails, the configured launcher automatically runs Access Guard again in `PostFailure` mode so the run log and failure-time environment can be reviewed together.
+- Added `DIAGNOSE-ACCESS-DENIED.cmd` for one-click read-only collection of the same report.
+- Reports collect target existence, attributes, reparse-point state, owner, SDDL/ACL context, `icacls` output, relevant ChatGPT/Codex/helper/browser processes, Restart Manager lock owners, antivirus/security-product context, matching security/encryption/DLP service candidates, file-system minifilters, and BitLocker status.
+- Restart Manager interop uses `System.Runtime.InteropServices.ComTypes.FILETIME` explicitly to avoid the `FILETIME` type ambiguity seen in an earlier diagnostic attempt.
+- Generic `node.exe` processes are not treated as Codex helpers unless their path or command line contains Codex/plugin/CUA-specific indicators.
+- Security/encryption/DLP discovery is diagnostic only. A matching service is reported as a candidate, not asserted to be the root cause.
+
+### Atomic directory move hardening
+
+- The configured 4.0 launcher now applies a checked patch to the generated runtime copy of `Start-WinBridge-Recovery.ps1`.
+- The original core source file remains unchanged and the existing SHA-256 source-integrity check is retained.
+- Five directory move/swap points used by atomic install, removal, rollback, and restore are replaced in the runtime copy with bounded retry logic.
+- Each move receives up to six attempts with short backoff delays. This is intended only for transient races such as a short antivirus/EDR scan or another temporary file handle.
+- The patch validates the expected core layout and exact occurrence count before changing the runtime copy. If a future core layout no longer matches, WinBridge refuses to apply the patch rather than modifying an unknown structure.
+- Permanent permission, policy, encryption, ACL, reparse-point, or filter-driver failures are not bypassed; after the bounded retry is exhausted the original operation still fails and a post-failure Access Guard report is collected.
+
+### Safety boundaries retained
+
+WinBridge 4.0 Access Guard does **not**:
+
+- disable, uninstall, evade, or bypass enterprise EDR/DLP/encryption software;
+- modify company security policy;
+- take ownership of the entire `.codex` tree or reset its ACLs;
+- change ownership or permissions under `C:\Program Files\WindowsApps`;
+- force-delete repair targets;
+- kill every `node.exe` process;
+- remove backup/integrity checks;
+- use injection, hooks, drivers, or kernel techniques to defeat a security product.
+
+If a company security product or file-system filter is the actual policy owner of the directory, the correct next step is to use the generated evidence with the company IT/security administrator rather than bypassing the control.
+
+### Validation status
+
+- GitHub-side source review of the new wrapper integration and safety boundaries: PASS.
+- The original `Start-WinBridge-Recovery.ps1` source remains unchanged by the 4.0 runtime patch design.
+- Windows-only runtime execution of Restart Manager, `fltmc`, `manage-bde`, and the bounded `Move-Item` retry path has **not yet been executed in this Linux tool environment**. This development branch still requires a real Windows 10/11 + Windows PowerShell 5.1 test before the behavior should be treated as release-ready.
+
+---
+
 # WinBridge Recovery v3.1.1
 
 ## Maintenance update
