@@ -88,7 +88,8 @@ try {
     'ROLLBACK-LAST.cmd',
     'SELF-TEST.cmd',
     'START-BEFORE-DESKTOP.cmd',
-    'Start-WinBridge-Recovery.ps1'
+    'Start-WinBridge-Recovery.ps1',
+    'WinBridge-4.0-Preflight.ps1'
   )
   foreach ($name in $rootFiles) {
     $sourcePath = Join-Path $projectRoot $name
