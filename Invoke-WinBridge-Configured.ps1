@@ -14,6 +14,7 @@ $sourceMaintenance = Join-Path $PSScriptRoot 'Maintain-Launcher-State.ps1'
 $runtimeMaintenance = Join-Path $PSScriptRoot 'Maintain-Launcher-State.runtime.ps1'
 $pointerHelper = Join-Path $PSScriptRoot 'Repair-BrowserLatest.ps1'
 $auditHelper = Join-Path $PSScriptRoot 'Audit-Launcher-Writes.ps1'
+$preflightHelper = Join-Path $PSScriptRoot 'WinBridge-4.0-Preflight.ps1'
 $storageConfig = Join-Path $PSScriptRoot 'Config\storage.ini'
 $exitCode = 1
 $auditStarted = $false
@@ -86,6 +87,34 @@ function Write-ConfiguredCopy {
   }
 }
 
+function Invoke-Preflight {
+  param([Parameter(Mandatory = $true)][string]$CurrentMode)
+
+  if (-not (Test-Path -LiteralPath $preflightHelper -PathType Leaf)) {
+    Write-Output '[WARN] WinBridge 4.0 preflight helper is missing; continuing with the legacy core diagnosis.'
+    return
+  }
+
+  $arguments = @(
+    '-NoLogo',
+    '-NoProfile',
+    '-ExecutionPolicy', 'Bypass',
+    '-File', $preflightHelper
+  )
+  if ($CurrentMode -eq 'RepairAndLaunch') {
+    $arguments += '-NoConsole'
+  }
+
+  & powershell.exe @arguments
+  $preflightExitCode = $LASTEXITCODE
+  switch ($preflightExitCode) {
+    0 { Write-Output '[OK] WinBridge 4.0 preflight found no warning-level divergence.' }
+    1 { Write-Output '[WARN] WinBridge 4.0 preflight found one or more warning-level conditions. The detailed JSON report was saved in Logs.' }
+    2 { Write-Output '[WARN] WinBridge 4.0 preflight found an error-level condition. The core launcher will continue so it can provide its own authoritative diagnosis.' }
+    default { Write-Output ('[WARN] WinBridge 4.0 preflight could not complete cleanly (exit code {0}). The core launcher will continue.' -f $preflightExitCode) }
+  }
+}
+
 try {
   $backupRoot = Read-StorageConfiguration
   $escapedBackupRoot = $backupRoot.Replace("'", "''")
@@ -104,6 +133,10 @@ try {
     -Replacement ("`$backupRoot = '" + $escapedBackupRoot + "'")
 
   Write-Output ('[INFO] Configured backup root: {0}' -f $backupRoot)
+
+  if ($Mode -in @('RepairAndLaunch','DiagnoseOnly')) {
+    Invoke-Preflight -CurrentMode $Mode
+  }
 
   if ($Mode -eq 'RepairAndLaunch' -and
       (Test-Path -LiteralPath $auditHelper -PathType Leaf)) {
