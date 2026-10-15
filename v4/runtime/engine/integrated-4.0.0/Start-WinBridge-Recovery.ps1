@@ -599,6 +599,63 @@ function Test-TomlTextContainsPath {
   return $Text.Contains($Path.Replace('\', '\\'))
 }
 
+function Resolve-PhysicalDirectoryPath {
+  # Follows junctions and directory symbolic links so the result names the same
+  # directory through real directories only. Missing trailing components are
+  # kept as written; a reparse point whose target is not a drive or UNC path
+  # (for example a volume mount point) is kept unresolved.
+  param(
+    [Parameter(Mandatory = $true)][string]$Path,
+    [int]$Depth = 0
+  )
+  if ($Depth -gt 32) { throw "Too many nested reparse points while resolving: $Path" }
+  $full = [System.IO.Path]::GetFullPath($Path)
+  $root = [System.IO.Path]::GetPathRoot($full)
+  $segments = @($full.Substring($root.Length).Split([char[]]@('\'), [System.StringSplitOptions]::RemoveEmptyEntries))
+  $current = $root
+  for ($index = 0; $index -lt $segments.Count; $index++) {
+    $candidate = Join-Path $current $segments[$index]
+    $item = Get-Item -LiteralPath $candidate -Force -ErrorAction SilentlyContinue
+    if ($null -eq $item) {
+      for ($rest = $index + 1; $rest -lt $segments.Count; $rest++) { $candidate = Join-Path $candidate $segments[$rest] }
+      return $candidate
+    }
+    $target = if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { [string](@($item.Target) | Select-Object -First 1) } else { '' }
+    if ([string]::IsNullOrWhiteSpace($target) -or $target -match '^(\\\\\?\\)?Volume\{') {
+      $current = $candidate
+      continue
+    }
+    if (-not [System.IO.Path]::IsPathRooted($target)) { $target = Join-Path (Split-Path -Parent $candidate) $target }
+    $current = Resolve-PhysicalDirectoryPath $target ($Depth + 1)
+  }
+  return $current
+}
+
+function Get-RedactedDiagnosticText {
+  # Diagnostics may be attached to public issues: replace profile locations
+  # and the account name with placeholders and drop credential-like values.
+  param(
+    [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Text,
+    [string[]]$ExtraPaths = @()
+  )
+  $replacements = New-Object System.Collections.ArrayList
+  foreach ($extra in $ExtraPaths) { if ($extra) { [void]$replacements.Add(@([string]$extra, '<CODEX_HOME_TARGET>')) } }
+  foreach ($name in @('LOCALAPPDATA', 'APPDATA', 'USERPROFILE')) {
+    $value = [Environment]::GetEnvironmentVariable($name)
+    if ($value) { [void]$replacements.Add(@($value, "%$name%")) }
+  }
+  $result = $Text
+  foreach ($pair in ($replacements | Sort-Object { ([string]$_[0]).Length } -Descending)) {
+    $result = [regex]::Replace($result, [regex]::Escape(([string]$pair[0]).TrimEnd('\')), ([string]$pair[1]).Replace('$', '$$'), 'IgnoreCase')
+  }
+  if ($env:USERNAME -and $env:USERNAME.Length -ge 3) {
+    $result = [regex]::Replace($result, '(?<![A-Za-z0-9])' + [regex]::Escape($env:USERNAME) + '(?![A-Za-z0-9])', '<user>', 'IgnoreCase')
+  }
+  $result = [regex]::Replace($result, '(?i)\b(bearer\s+)[A-Za-z0-9._~+/=-]{8,}', '$1<redacted>')
+  $result = [regex]::Replace($result, '\bsk-[A-Za-z0-9_-]{8,}', '<redacted>')
+  return [regex]::Replace($result, '(?i)\b(api[_-]?key|token|secret|password)(\s*[=:]\s*)\S+', '$1$2<redacted>')
+}
+
 function Get-PluginVersion {
   param([Parameter(Mandatory = $true)][string]$PluginRoot)
   $manifestPath = Join-Path $PluginRoot '.codex-plugin\plugin.json'
@@ -721,6 +778,10 @@ function Get-CurrentContext {
     CodexHome = $codexHome
     ConfigPath = Join-Path $codexHome 'config.toml'
     ActiveMarketplace = Join-Path $codexHome '.tmp\bundled-marketplaces\openai-bundled'
+    # The Codex CLI lists no plugins from a local marketplace whose configured
+    # source passes through a junction (for example a relocated .codex), so the
+    # config records the physical directory.
+    ActiveMarketplaceSource = Resolve-PhysicalDirectoryPath (Join-Path $codexHome '.tmp\bundled-marketplaces\openai-bundled')
     CacheRoot = Join-Path $codexHome 'plugins\cache\openai-bundled'
     AppServerRoot = Join-Path $codexHome 'plugins\.plugin-appserver'
     SandboxBinRoot = Join-Path $codexHome '.sandbox-bin'
@@ -1100,7 +1161,8 @@ function Get-StateIssues {
     [void]$issues.Add("safe runtime tree differs from the current package ($($runtimeDiff.Count) file issue(s))")
   }
   $marketTable = Get-TomlTableText $Context.ConfigPath '[marketplaces.openai-bundled]'
-  if (-not (Test-TomlTextContainsPath $marketTable $Context.ActiveMarketplace)) {
+  if (-not (Test-TomlTextContainsPath $marketTable $Context.ActiveMarketplaceSource) -and
+      -not (Test-TomlTextContainsPath $marketTable $Context.ActiveMarketplace)) {
     [void]$issues.Add('config marketplace source is missing or stale')
   }
   foreach ($name in @('browser', 'chrome', 'computer-use')) {
@@ -1664,7 +1726,7 @@ function Set-LatestJunction {
 
 function Update-CodexConfig {
   param([Parameter(Mandatory = $true)][object]$Context)
-  $longMarketplace = '\\?\' + [System.IO.Path]::GetFullPath($Context.ActiveMarketplace)
+  $longMarketplace = '\\?\' + [System.IO.Path]::GetFullPath($Context.ActiveMarketplaceSource)
   Set-TomlTable $Context.ConfigPath '[marketplaces.openai-bundled]' ([ordered]@{
     last_updated = [DateTime]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
     source = $longMarketplace
@@ -1825,6 +1887,58 @@ function Test-RemoteMarketplaceCatalogFailure {
   return $mentionsRemoteCatalog -and $mentionsTransportOrParsing
 }
 
+function Write-CliValidationDiagnostics {
+  # Logs the evidence behind a CLI validation failure (command, environment,
+  # exit code and bounded output) with profile paths and credentials redacted.
+  param(
+    [Parameter(Mandatory = $true)][object]$Context,
+    [Parameter(Mandatory = $true)][string]$Cli,
+    [Parameter(Mandatory = $true)][string[]]$Arguments,
+    [Parameter(Mandatory = $true)][object]$Result,
+    [Parameter(Mandatory = $true)][string]$Reason
+  )
+  $homeTarget = Resolve-PhysicalDirectoryPath $Context.CodexHome
+  $extraPaths = @()
+  if ($homeTarget -ne [System.IO.Path]::GetFullPath($Context.CodexHome)) { $extraPaths = @($homeTarget) }
+  $redact = { param($value) Get-RedactedDiagnosticText ([string]$value) $extraPaths }
+  $source = ([regex]::Match((Get-TomlTableText $Context.ConfigPath '[marketplaces.openai-bundled]'), '(?m)^\s*source\s*=\s*(.+?)\s*$')).Groups[1].Value
+  if ($source -match '^"(.*)"$') {
+    $source = $Matches[1].Replace('\\', '\')
+  } elseif ($source -match "^'(.*)'$") {
+    $source = $Matches[1]
+  }
+  Write-Log ("CLI validation failed: {0}" -f (& $redact $Reason)) 'ERROR'
+  Write-Log ("CLI command: {0} {1}" -f (& $redact $Cli), ($Arguments -join ' ')) 'ERROR'
+  Write-Log ("CLI environment: CODEX_HOME={0}; CODEX_HOME is a junction or link: {1}; working directory={2}" -f (& $redact $Context.CodexHome), ($extraPaths.Count -gt 0), (& $redact (Get-Location).Path)) 'ERROR'
+  Write-Log ("Configured marketplace source: {0}; expected physical source: {1}" -f (& $redact $source), (& $redact ('\\?\' + $Context.ActiveMarketplaceSource))) 'ERROR'
+  $lines = @($Result.Output)
+  Write-Log ("CLI exit code: {0}; output lines: {1}" -f $Result.ExitCode, $lines.Count) 'ERROR'
+  foreach ($line in ($lines | Select-Object -First 80)) {
+    $text = & $redact $line
+    if ($text.Length -gt 400) { $text = $text.Substring(0, 400) + '...' }
+    Write-Log ("CLI output | {0}" -f $text) 'ERROR'
+  }
+  if ($lines.Count -gt 80) { Write-Log ("CLI output truncated after 80 of {0} lines." -f $lines.Count) 'ERROR' }
+}
+
+function Get-CliPluginRegistrationProblem {
+  # Returns $null when the plugin list reports $Name installed, enabled and at
+  # $Version; otherwise a short description of what the CLI actually reported.
+  param(
+    [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Text,
+    [Parameter(Mandatory = $true)][string]$Name,
+    [Parameter(Mandatory = $true)][string]$Version
+  )
+  $pattern = [regex]::Escape($Name + '@openai-bundled') + '.*installed, enabled\s+' + [regex]::Escape($Version)
+  if ($Text -match $pattern) { return $null }
+  if ($Text -match '(?m)^No marketplace plugins found\.?\s*$') {
+    return 'codex plugin list reported no marketplace plugins'
+  }
+  $line = ([regex]::Match($Text, '(?m)^' + [regex]::Escape($Name + '@openai-bundled') + '\s+.*$')).Value
+  if (-not $line) { return "codex plugin list has no entry for $Name@openai-bundled" }
+  return ("codex plugin list reports: {0}" -f (($line -replace '\s{2,}', ' | ').Trim()))
+}
+
 function Invoke-CliValidation {
   param([Parameter(Mandatory = $true)][object]$Context)
   $cli = Join-Path $Context.OfficialCliRoot 'codex.exe'
@@ -1832,25 +1946,33 @@ function Invoke-CliValidation {
   $oldHome = $env:CODEX_HOME
   try {
     $env:CODEX_HOME = $Context.CodexHome
+    $pluginArguments = @('plugin', 'list')
     $pluginResult = Invoke-CliCommandCapture $cli @('plugin', 'list')
     if ($pluginResult.ExitCode -ne 0) {
       if (Test-RemoteMarketplaceCatalogFailure $pluginResult.Text) {
         Write-Log 'The official remote plugin catalog is temporarily unavailable; continuing with authoritative local static validation.' 'WARN'
       } else {
+        Write-CliValidationDiagnostics $Context $cli $pluginArguments $pluginResult 'codex plugin list exited with a non-zero code'
         throw "codex plugin list failed: $($pluginResult.Output -join ' ')"
       }
     } else {
       foreach ($name in @('browser', 'chrome', 'computer-use')) {
         $version = [string]$Context.PluginVersions[$name]
-        $pattern = [regex]::Escape($name + '@openai-bundled') + '.*installed, enabled\s+' + [regex]::Escape($version)
-        if ($pluginResult.Text -notmatch $pattern) {
-          throw "CLI registration validation failed for $name@$version"
+        $problem = Get-CliPluginRegistrationProblem $pluginResult.Text $name $version
+        if ($problem) {
+          Write-CliValidationDiagnostics $Context $cli $pluginArguments $pluginResult "$name@$version is not installed, enabled at the expected version: $problem"
+          throw "CLI registration validation failed for $name@$version`: $problem"
         }
       }
     }
+    $mcpArguments = @('mcp', 'list')
     $mcpResult = Invoke-CliCommandCapture $cli @('mcp', 'list')
-    if ($mcpResult.ExitCode -ne 0) { throw "codex mcp list failed: $($mcpResult.Output -join ' ')" }
+    if ($mcpResult.ExitCode -ne 0) {
+      Write-CliValidationDiagnostics $Context $cli $mcpArguments $mcpResult 'codex mcp list exited with a non-zero code'
+      throw "codex mcp list failed: $($mcpResult.Output -join ' ')"
+    }
     if ($mcpResult.Text -notmatch '(?m)^node_repl\s+') {
+      Write-CliValidationDiagnostics $Context $cli $mcpArguments $mcpResult 'node_repl is missing from codex mcp list'
       throw 'node_repl MCP is not registered after config update.'
     }
   } finally {
