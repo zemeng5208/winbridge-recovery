@@ -4,6 +4,8 @@ import { colorPresets, pluginStates, schemes, settingCategories } from "../data/
 import { Icon } from "./Icons.jsx";
 import { applyColorPreset } from "./MixPanel.jsx";
 import { MenuGlyph } from "./BrandIcon.jsx";
+import { useI18n } from "../i18n/I18nProvider.jsx";
+import { LANGUAGE_NATIVE_NAMES, formatMessage, resolveSystemLocale } from "../i18n/index.js";
 
 function Toggle({ checked, onChange, label }) {
   return (
@@ -21,12 +23,13 @@ function Toggle({ checked, onChange, label }) {
 }
 
 function SettingRow({ title, description, control, lock = false }) {
+  const t = useI18n();
   return (
     <div className="setting-row">
       <div className="setting-copy">
         <div className="setting-title">
           {title}
-          {lock ? <span className="locked-tag">强制安全项</span> : null}
+          {lock ? <span className="locked-tag">{t("settings.lockedTag")}</span> : null}
         </div>
         <p>{description}</p>
       </div>
@@ -71,8 +74,10 @@ export default function SettingsCenter({
   bridgeAvailable = false,
   runtimeSettingsHydrated = false,
   runtimeSettingsError = "",
+  initialCategory = "general",
 }) {
-  const [active, setActive] = useState("general");
+  const t = useI18n();
+  const [active, setActive] = useState(initialCategory);
   const [query, setQuery] = useState("");
   const [capabilityState, setCapabilityState] = useState("pending");
   const [importMessage, setImportMessage] = useState("");
@@ -88,8 +93,8 @@ export default function SettingsCenter({
   const visibleCategories = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     if (!normalized) return settingCategories;
-    return settingCategories.filter((item) => item.label.toLowerCase().includes(normalized));
-  }, [query]);
+    return settingCategories.filter((item) => t(`settings.category.${item.id}`).toLowerCase().includes(normalized));
+  }, [query, t]);
 
   if (!open) return null;
 
@@ -100,20 +105,20 @@ export default function SettingsCenter({
     if (!file) return;
     try {
       onImportConfig(JSON.parse(await file.text()));
-      setImportMessage("配置已导入并即时应用");
+      setImportMessage("settings.importSuccess");
     } catch {
-      setImportMessage("导入失败：请选择有效的纯 JSON 配置");
+      setImportMessage("settings.importFailure");
     }
     event.target.value = "";
   };
   const pluginIdentityColors = mix.pluginColors ?? ["#4de0a2", "#ffc05b", "#58b7ff"];
   const runtimeSettingsStatus = runtimeSettingsError
-    ? { tone: "error", label: "本机设置保存已禁用", detail: runtimeSettingsError }
+    ? { tone: "error", label: t("settings.status.saveDisabled"), detail: formatMessage(t, runtimeSettingsError) }
     : !bridgeAvailable
-      ? { tone: "error", label: "本机桥接不可用", detail: "当前只保留界面本地偏好，不会写入运行时设置。" }
+      ? { tone: "error", label: t("settings.status.bridgeUnavailable"), detail: t("settings.status.bridgeUnavailableDetail") }
       : runtimeSettingsHydrated
-        ? { tone: "ready", label: "本机设置已加载", detail: "settings schema v1 已读取；已映射项目可保存到本机运行时。" }
-        : { tone: "pending", label: "正在读取本机设置", detail: "窗口已立即显示；读取完成前不会调用原生保存。" };
+        ? { tone: "ready", label: t("settings.status.loaded"), detail: t("settings.status.loadedDetail") }
+        : { tone: "pending", label: t("settings.status.loading"), detail: t("settings.status.loadingDetail") };
   const setChannel = (index, value) => {
     setMix((current) => {
       const channels = [...current.channels];
@@ -128,104 +133,106 @@ export default function SettingsCenter({
       return { ...current, colorPreset: "custom", pluginColors };
     });
   };
+  const schemeName = (item) => t(`scheme.${item.id}.name`);
+  const systemLanguageName = LANGUAGE_NATIVE_NAMES[resolveSystemLocale()];
 
   const content = {
     general: (
       <>
-        <Section title="启动协议" description="诊断先行是协议，不是可被误关的装饰开关。">
-          <SettingRow title="界面语言" description={runtimeMode ? "界面偏好；当前 alpha 尚未映射到 native settings schema。英文仍为占位。" : "Schema 已预留 locale；英文仍为后续占位。"} control={<SelectControl label="界面语言" value={settings.language} onChange={setFlag("language")}><option value="zh-CN">简体中文</option><option value="en-US">English（占位）</option></SelectControl>} />
-          <SettingRow title="启动行为" description={runtimeMode ? "界面偏好；当前 alpha 尚未绑定 Electron 启动策略。诊断与打开 GPT 仍由明确按钮触发。" : "默认进入只读诊断；直接打开 GPT 仍保留独立入口。"} control={<SelectControl label="启动行为" value={settings.launchBehavior} onChange={setFlag("launchBehavior")}><option value="diagnose">只读诊断</option><option value="open-gpt">直接打开 GPT</option></SelectControl>} />
+        <Section title={t("settings.general.protocol")} description={t("settings.general.protocolDesc")}>
+          <SettingRow title={t("settings.general.language")} description={runtimeMode ? t("settings.general.languageDescRuntime") : t("settings.general.languageDescConcept")} control={<SelectControl label={t("settings.general.language")} value={settings.language} onChange={setFlag("language")}><option value="system">{t("settings.general.languageSystem", { language: systemLanguageName })}</option><option value="zh-CN" lang="zh-CN">{LANGUAGE_NATIVE_NAMES["zh-CN"]}</option><option value="en-US" lang="en-US">{LANGUAGE_NATIVE_NAMES["en-US"]}</option></SelectControl>} />
+          <SettingRow title={t("settings.general.launch")} description={runtimeMode ? t("settings.general.launchDescRuntime") : t("settings.general.launchDescConcept")} control={<SelectControl label={t("settings.general.launch")} value={settings.launchBehavior} onChange={setFlag("launchBehavior")}><option value="diagnose">{t("settings.general.launchDiagnose")}</option><option value="open-gpt">{t("settings.general.launchOpenGpt")}</option></SelectControl>} />
           <SettingRow
-            title="启动后进入只读诊断"
-            description="先报告发现的问题、影响和预计动作；不会自动写入。"
+            title={t("settings.general.diagnoseOnStart")}
+            description={t("settings.general.diagnoseOnStartDesc")}
             lock
-            control={<span className="locked-value">始终启用</span>}
+            control={<span className="locked-value">{t("settings.general.alwaysOn")}</span>}
           />
           <SettingRow
-            title="开机启动"
-            description={runtimeMode ? "界面偏好；当前 alpha 尚未绑定系统开机启动执行层。" : "新增设置默认关闭；只有用户主动开启才生效。"}
-            control={<Toggle label="开机启动" checked={settings.launchAtLogin} onChange={setFlag("launchAtLogin")} />}
+            title={t("settings.general.launchAtLogin")}
+            description={runtimeMode ? t("settings.general.launchAtLoginDescRuntime") : t("settings.general.launchAtLoginDescConcept")}
+            control={<Toggle label={t("settings.general.launchAtLogin")} checked={settings.launchAtLogin} onChange={setFlag("launchAtLogin")} />}
           />
           <SettingRow
-            title="后台下载更新"
-            description={runtimeMode ? "界面偏好；当前 alpha 尚未绑定更新执行层，不会据此下载或安装。" : "默认关闭，不在后台自动下载或安装。"}
-            control={<Toggle label="后台下载更新" checked={settings.backgroundUpdates} onChange={setFlag("backgroundUpdates")} />}
+            title={t("settings.general.backgroundUpdates")}
+            description={runtimeMode ? t("settings.general.backgroundUpdatesDescRuntime") : t("settings.general.backgroundUpdatesDescConcept")}
+            control={<Toggle label={t("settings.general.backgroundUpdates")} checked={settings.backgroundUpdates} onChange={setFlag("backgroundUpdates")} />}
           />
         </Section>
-        <Section title="日志显示与保留">
-          <SettingRow title="自动跟随最新日志" description={runtimeMode ? "仅控制当前界面的自动滚动；不会改变磁盘日志协议。" : "可随时关闭，完整日志仍保留在文件。"} control={<Toggle label="自动跟随最新日志" checked={settings.logAutoFollow} onChange={setFlag("logAutoFollow")} />} />
-          <SettingRow title="日志保留周期" description={runtimeMode ? "界面偏好；当前 alpha 尚未绑定日志文件保留与清理执行层。" : "仅配置概念；本页不写入真实日志。"} control={<SelectControl label="日志保留周期" value={settings.logRetention} onChange={setFlag("logRetention")}><option value="session">仅本次</option><option value="7-days">7 天</option><option value="30-days">30 天</option></SelectControl>} />
+        <Section title={t("settings.logs.title")}>
+          <SettingRow title={t("settings.logs.follow")} description={runtimeMode ? t("settings.logs.followDescRuntime") : t("settings.logs.followDescConcept")} control={<Toggle label={t("settings.logs.follow")} checked={settings.logAutoFollow} onChange={setFlag("logAutoFollow")} />} />
+          <SettingRow title={t("settings.logs.retention")} description={runtimeMode ? t("settings.logs.retentionDescRuntime") : t("settings.logs.retentionDescConcept")} control={<SelectControl label={t("settings.logs.retention")} value={settings.logRetention} onChange={setFlag("logRetention")}><option value="session">{t("settings.logs.retentionSession")}</option><option value="7-days">{t("settings.logs.retention7")}</option><option value="30-days">{t("settings.logs.retention30")}</option></SelectControl>} />
         </Section>
-        <Section title="修复完成后的行为">
+        <Section title={t("settings.afterRepair.title")}>
           <SettingRow
-            title="停留在结果页"
-            description="展示诊断前后、问题、执行动作、结果、未解决项和日志入口。"
+            title={t("settings.afterRepair.stay")}
+            description={t("settings.afterRepair.stayDesc")}
             lock
-            control={<span className="locked-value">默认行为</span>}
+            control={<span className="locked-value">{t("settings.afterRepair.defaultBehavior")}</span>}
           />
           <SettingRow
-            title="修复完成后自动关闭"
-            description={runtimeMode ? "已映射到 native settings v1；默认 OFF，只有本次用户显式切换后才允许保存为 ON。" : "默认 OFF；迁移旧设置时也不得自动开启。用户主动开启后才生效。"}
-            control={<Toggle label="修复完成后自动关闭" checked={settings.autoCloseAfterRepair} onChange={(value) => setSettings((current) => ({ ...current, autoCloseAfterRepair: value, autoCloseAfterRepairExplicit: true }))} />}
+            title={t("settings.afterRepair.autoClose")}
+            description={runtimeMode ? t("settings.afterRepair.autoCloseDescRuntime") : t("settings.afterRepair.autoCloseDescConcept")}
+            control={<Toggle label={t("settings.afterRepair.autoClose")} checked={settings.autoCloseAfterRepair} onChange={(value) => setSettings((current) => ({ ...current, autoCloseAfterRepair: value, autoCloseAfterRepairExplicit: true }))} />}
           />
         </Section>
       </>
     ),
     appearance: (
       <>
-        <Section title="三级外观关系" description="布局决定信息组织；材质决定表面；颜色只写入独立 Token。">
+        <Section title={t("settings.appearance.levels")} description={t("settings.appearance.levelsDesc")}>
           <div className="appearance-levels">
-            <article><span>1 · 布局</span><strong>{scheme.name}</strong><p>五套真实信息架构</p></article>
+            <article><span>{t("settings.appearance.level1")}</span><strong>{schemeName(scheme)}</strong><p>{t("settings.appearance.level1Hint")}</p></article>
             <i>×</i>
-            <article><span>2 · 材质</span><strong>{mix.material === "glass" ? "Glass Regular" : "Solid"}</strong><p>玻璃或实体面板</p></article>
+            <article><span>{t("settings.appearance.level2")}</span><strong>{mix.material === "glass" ? "Glass Regular" : "Solid"}</strong><p>{t("settings.appearance.level2Hint")}</p></article>
             <i>×</i>
-            <article><span>3 · 配色</span><strong>{colorPresets.find((item) => item.id === mix.colorPreset)?.name ?? "自定义"}</strong><p>预设与三色通道</p></article>
+            <article><span>{t("settings.appearance.level3")}</span><strong>{colorPresets.some((item) => item.id === mix.colorPreset) ? t(`colorPreset.${mix.colorPreset}.name`) : t("colorPreset.custom")}</strong><p>{t("settings.appearance.level3Hint")}</p></article>
           </div>
         </Section>
-        <Section title="布局" description="切换布局不会重置材质、配色或业务状态。">
+        <Section title={t("settings.appearance.layout")} description={t("settings.appearance.layoutDesc")}>
           <div className="settings-layout-choices">
-            {schemes.map((item) => <button type="button" key={item.id} className={scheme.id === item.id ? "is-selected" : ""} onClick={() => onSchemeChange(item)}><span className={`layout-mini layout-mini-${item.code.toLowerCase()}`} aria-hidden="true"><i/><i/><i/><i/></span><span><strong>{item.name}</strong><small>{item.fit}</small></span></button>)}
+            {schemes.map((item) => <button type="button" key={item.id} className={scheme.id === item.id ? "is-selected" : ""} onClick={() => onSchemeChange(item)}><span className={`layout-mini layout-mini-${item.code.toLowerCase()}`} aria-hidden="true"><i/><i/><i/><i/></span><span><strong>{schemeName(item)}</strong><small>{t(`scheme.${item.id}.fit`)}</small></span></button>)}
           </div>
         </Section>
-        <Section title="材质" description="玻璃只用于壳层、导航和浮控；终端与密集正文保持高可读面板。">
+        <Section title={t("settings.appearance.material")} description={t("settings.appearance.materialDesc")}>
           <div className="material-cards">
-            <button type="button" className={mix.material === "glass" ? "is-selected" : ""} onClick={() => setMix((current) => ({ ...current, material: "glass" }))}><span className="material-preview preview-glass"/><strong>Glass Regular</strong><small>背景透过、模糊、近似折射、边缘高光</small></button>
-            <button type="button" className={mix.material === "solid" ? "is-selected" : ""} onClick={() => setMix((current) => ({ ...current, material: "solid" }))}><span className="material-preview preview-solid"/><strong>Solid</strong><small>实体面板、低开销、高兼容</small></button>
+            <button type="button" className={mix.material === "glass" ? "is-selected" : ""} onClick={() => setMix((current) => ({ ...current, material: "glass" }))}><span className="material-preview preview-glass"/><strong>Glass Regular</strong><small>{t("settings.appearance.glassHint")}</small></button>
+            <button type="button" className={mix.material === "solid" ? "is-selected" : ""} onClick={() => setMix((current) => ({ ...current, material: "solid" }))}><span className="material-preview preview-solid"/><strong>Solid</strong><small>{t("settings.appearance.solidHint")}</small></button>
           </div>
         </Section>
-        <Section title="颜色预设" description="黑曜为默认；安全语义色不随装饰预设改变。">
+        <Section title={t("settings.appearance.presets")} description={t("settings.appearance.presetsDesc")}>
           <div className="settings-preset-grid">
-            {colorPresets.map((preset) => <button type="button" key={preset.id} className={mix.colorPreset === preset.id ? "is-selected" : ""} onClick={() => applyColorPreset(setMix, preset.id)}><span>{preset.swatches.map((color) => <i key={color} style={{ background: color }}/>)}</span><strong>{preset.name}</strong><small>{preset.description}</small></button>)}
+            {colorPresets.map((preset) => <button type="button" key={preset.id} className={mix.colorPreset === preset.id ? "is-selected" : ""} onClick={() => applyColorPreset(setMix, preset.id)}><span>{preset.swatches.map((color) => <i key={color} style={{ background: color }}/>)}</span><strong>{t(`colorPreset.${preset.id}.name`)}</strong><small>{t(`colorPreset.${preset.id}.description`)}</small></button>)}
           </div>
-          <SettingRow title="自定义强调色" description="只改变装饰与交互强调，不改变危险/警告/成功语义。" control={<label className="color-control"><input type="color" value={mix.accent} onChange={(event) => setMix((current) => ({ ...current, colorPreset: "custom", accent: event.target.value }))}/><code>{mix.accent.toUpperCase()}</code></label>}/>
-          <SettingRow title="次强调色" description="用于次级焦点和辅助层次；安全语义色保持锁定。" control={<label className="color-control"><input type="color" value={mix.secondaryAccent} onChange={(event) => setMix((current) => ({ ...current, colorPreset: "custom", secondaryAccent: event.target.value }))}/><code>{mix.secondaryAccent.toUpperCase()}</code></label>}/>
-          {pluginStates.map((plugin, index) => <SettingRow key={`plugin-color-${plugin.id}`} title={`${plugin.name} 装饰状态色`} description="用于插件卡身份光与外圈；风险仍由固定语义色、图标和文字表达。" control={<label className="color-control"><input type="color" value={pluginIdentityColors[index]} onChange={(event) => setPluginColor(index, event.target.value)}/><code>{pluginIdentityColors[index].toUpperCase()}</code></label>}/>) }
+          <SettingRow title={t("settings.appearance.accent")} description={t("settings.appearance.accentDesc")} control={<label className="color-control"><input type="color" value={mix.accent} onChange={(event) => setMix((current) => ({ ...current, colorPreset: "custom", accent: event.target.value }))}/><code>{mix.accent.toUpperCase()}</code></label>}/>
+          <SettingRow title={t("settings.appearance.secondaryAccent")} description={t("settings.appearance.secondaryAccentDesc")} control={<label className="color-control"><input type="color" value={mix.secondaryAccent} onChange={(event) => setMix((current) => ({ ...current, colorPreset: "custom", secondaryAccent: event.target.value }))}/><code>{mix.secondaryAccent.toUpperCase()}</code></label>}/>
+          {pluginStates.map((plugin, index) => <SettingRow key={`plugin-color-${plugin.id}`} title={t("settings.appearance.pluginColor", { plugin: plugin.name })} description={t("settings.appearance.pluginColorDesc")} control={<label className="color-control"><input type="color" value={pluginIdentityColors[index]} onChange={(event) => setPluginColor(index, event.target.value)}/><code>{pluginIdentityColors[index].toUpperCase()}</code></label>}/>) }
         </Section>
-        <Section title="玻璃参数" description="Solid 模式保留数值但不渲染高成本效果。">
+        <Section title={t("settings.appearance.glass")} description={t("settings.appearance.glassDesc")}>
           {[
-            ["glassOpacity", "背景不透明度", 58, 78, "%"],
-            ["glassBlur", "背景模糊", 20, 36, "px"],
-            ["glassRefraction", "近似折射", 0, 8, "px"],
-            ["edgeHighlight", "边缘高光", 22, 46, "%"],
-          ].map(([key, title, min, max, unit]) => <SettingRow key={key} title={title} description="限制在可读性与性能护栏内。" control={<label className="range-control"><input type="range" min={min} max={max} value={mix[key]} onChange={(event) => setMix((current) => ({ ...current, [key]: Number(event.target.value) }))}/><span>{mix[key]}{unit}</span></label>}/>) }
-          <SettingRow title="跟随系统主题" description={runtimeMode ? "已映射到 native settings v1 的 theme 字段；布局与材质仍作为界面偏好独立保存。" : "默认关闭；启用后仍保留当前布局与材质选择。"} control={<Toggle label="跟随系统主题" checked={settings.followSystemTheme} onChange={setFlag("followSystemTheme")} />}/>
-          <SettingRow title="界面密度" description="与布局正交，切换布局不会重置。" control={<SelectControl label="界面密度" value={mix.density} onChange={(value) => setMix((current) => ({ ...current, density: value }))}><option value="compact">紧凑</option><option value="balanced">平衡</option><option value="airy">舒展</option></SelectControl>} />
-          <SettingRow title="几何圆角" description="只改变组件几何，不改变配色或材质。" control={<SelectControl label="几何圆角" value={mix.geometry} onChange={(value) => setMix((current) => ({ ...current, geometry: value }))}><option value="square">利落</option><option value="soft">柔和</option><option value="round">圆润</option></SelectControl>} />
-          <SettingRow title="圆角半径" description="在当前几何模式内精调；不会改变信息布局。" control={<label className="range-control"><input type="range" min="3" max="16" value={mix.cornerRadius} onChange={(event) => setMix((current) => ({ ...current, cornerRadius: Number(event.target.value) }))}/><span>{mix.cornerRadius}px</span></label>} />
-          <SettingRow title="界面缩放" description="独立于系统 DPI 的可访问性缩放。" control={<label className="range-control"><input type="range" min="90" max="115" step="5" value={mix.interfaceScale} onChange={(event) => setMix((current) => ({ ...current, interfaceScale: Number(event.target.value) }))}/><span>{mix.interfaceScale}%</span></label>} />
-          <SettingRow title="终端主题" description="使用同一语义 Token；亮色配色不会残留黑块。" control={<SelectControl label="终端主题" value={mix.terminalStyle} onChange={(value) => setMix((current) => ({ ...current, terminalStyle: value }))}><option value="structured">结构化</option><option value="calm">柔和</option><option value="contrast">高对比</option></SelectControl>} />
-          <SettingRow title="设置导航密度" description="侧栏完整导航或紧凑导航；设置内容与字段保持一致。" control={<SelectControl label="设置导航密度" value={mix.settingsLayout} onChange={(value) => setMix((current) => ({ ...current, settingsLayout: value }))}><option value="sidebar">完整侧栏</option><option value="compact">紧凑侧栏</option></SelectControl>} />
+            ["glassOpacity", 58, 78, "%"],
+            ["glassBlur", 20, 36, "px"],
+            ["glassRefraction", 0, 8, "px"],
+            ["edgeHighlight", 22, 46, "%"],
+          ].map(([key, min, max, unit]) => <SettingRow key={key} title={t(`settings.appearance.${key}`)} description={t("settings.appearance.glassGuard")} control={<label className="range-control"><input type="range" min={min} max={max} value={mix[key]} onChange={(event) => setMix((current) => ({ ...current, [key]: Number(event.target.value) }))}/><span>{mix[key]}{unit}</span></label>}/>) }
+          <SettingRow title={t("settings.appearance.followSystemTheme")} description={runtimeMode ? t("settings.appearance.followSystemThemeDescRuntime") : t("settings.appearance.followSystemThemeDescConcept")} control={<Toggle label={t("settings.appearance.followSystemTheme")} checked={settings.followSystemTheme} onChange={setFlag("followSystemTheme")} />}/>
+          <SettingRow title={t("settings.appearance.density")} description={t("settings.appearance.densityDesc")} control={<SelectControl label={t("settings.appearance.density")} value={mix.density} onChange={(value) => setMix((current) => ({ ...current, density: value }))}><option value="compact">{t("settings.appearance.densityCompact")}</option><option value="balanced">{t("settings.appearance.densityBalanced")}</option><option value="airy">{t("settings.appearance.densityAiry")}</option></SelectControl>} />
+          <SettingRow title={t("settings.appearance.geometry")} description={t("settings.appearance.geometryDesc")} control={<SelectControl label={t("settings.appearance.geometry")} value={mix.geometry} onChange={(value) => setMix((current) => ({ ...current, geometry: value }))}><option value="square">{t("settings.appearance.geometrySquare")}</option><option value="soft">{t("settings.appearance.geometrySoft")}</option><option value="round">{t("settings.appearance.geometryRound")}</option></SelectControl>} />
+          <SettingRow title={t("settings.appearance.radius")} description={t("settings.appearance.radiusDesc")} control={<label className="range-control"><input type="range" min="3" max="16" value={mix.cornerRadius} onChange={(event) => setMix((current) => ({ ...current, cornerRadius: Number(event.target.value) }))}/><span>{mix.cornerRadius}px</span></label>} />
+          <SettingRow title={t("settings.appearance.scale")} description={t("settings.appearance.scaleDesc")} control={<label className="range-control"><input type="range" min="90" max="115" step="5" value={mix.interfaceScale} onChange={(event) => setMix((current) => ({ ...current, interfaceScale: Number(event.target.value) }))}/><span>{mix.interfaceScale}%</span></label>} />
+          <SettingRow title={t("settings.appearance.terminal")} description={t("settings.appearance.terminalDesc")} control={<SelectControl label={t("settings.appearance.terminal")} value={mix.terminalStyle} onChange={(value) => setMix((current) => ({ ...current, terminalStyle: value }))}><option value="structured">{t("settings.appearance.terminalStructured")}</option><option value="calm">{t("settings.appearance.terminalCalm")}</option><option value="contrast">{t("settings.appearance.terminalContrast")}</option></SelectControl>} />
+          <SettingRow title={t("settings.appearance.settingsNav")} description={t("settings.appearance.settingsNavDesc")} control={<SelectControl label={t("settings.appearance.settingsNav")} value={mix.settingsLayout} onChange={(value) => setMix((current) => ({ ...current, settingsLayout: value }))}><option value="sidebar">{t("settings.appearance.settingsNavSidebar")}</option><option value="compact">{t("settings.appearance.settingsNavCompact")}</option></SelectControl>} />
         </Section>
       </>
     ),
     progress: (
       <>
-        <Section title="流体通道" description={runtimeMode ? "三色已映射到 native settings v1 的 progressColors；仅改变呈现，不改变真实进度。" : "三色通道均为独立实现，可直接调色。"}>
+        <Section title={t("settings.progress.channels")} description={runtimeMode ? t("settings.progress.channelsDescRuntime") : t("settings.progress.channelsDescConcept")}>
           {mix.channels.map((channel, index) => (
             <SettingRow
               key={`${channel}-${index}`}
-              title={`通道 ${String.fromCharCode(65 + index)}`}
-              description={["冷色主体", "中段融合", "完成前沿"][index]}
+              title={t("settings.progress.channel", { letter: String.fromCharCode(65 + index) })}
+              description={t(`settings.progress.channelHint${index}`)}
               control={
                 <label className="color-control">
                   <input type="color" value={channel} onChange={(event) => setChannel(index, event.target.value)} />
@@ -235,10 +242,10 @@ export default function SettingsCenter({
             />
           ))}
         </Section>
-        <Section title="动效与降级">
+        <Section title={t("settings.progress.motion")}>
           <SettingRow
-            title="流体速度"
-            description="速度连续平滑，不使用从左向右漂移的粒子。"
+            title={t("settings.progress.speed")}
+            description={t("settings.progress.speedDesc")}
             control={
               <label className="range-control">
                 <input
@@ -253,115 +260,115 @@ export default function SettingsCenter({
               </label>
             }
           />
-          <SettingRow title="进度缓冲" description="actualProgress 跳变时 displayedProgress 单调追赶，不越过真实值。" control={<SelectControl label="进度缓冲" value={settings.animationBuffer} onChange={setFlag("animationBuffer")}><option value="responsive">响应优先</option><option value="balanced">平衡 350–1200ms</option><option value="gentle">柔和</option></SelectControl>} />
-          <SettingRow title="阶段环动画" description="engineStageState 与 presentedStageState 使用有界视觉队列。" control={<Toggle label="阶段环动画" checked={settings.stageAnimation} onChange={setFlag("stageAnimation")} />} />
+          <SettingRow title={t("settings.progress.buffer")} description={t("settings.progress.bufferDesc")} control={<SelectControl label={t("settings.progress.buffer")} value={settings.animationBuffer} onChange={setFlag("animationBuffer")}><option value="responsive">{t("settings.progress.bufferResponsive")}</option><option value="balanced">{t("settings.progress.bufferBalanced")}</option><option value="gentle">{t("settings.progress.bufferGentle")}</option></SelectControl>} />
+          <SettingRow title={t("settings.progress.stageAnimation")} description={t("settings.progress.stageAnimationDesc")} control={<Toggle label={t("settings.progress.stageAnimation")} checked={settings.stageAnimation} onChange={setFlag("stageAnimation")} />} />
           <SettingRow
-            title="减少动态效果"
-            description={runtimeMode ? "已映射到 native settings v1；只改变 UI 动效，不影响引擎状态或完成判定。" : "默认关闭；系统 prefers-reduced-motion 仍会被自动尊重。"}
-            control={<Toggle label="减少动态效果" checked={settings.reduceMotion} onChange={setFlag("reduceMotion")} />}
+            title={t("settings.progress.reduceMotion")}
+            description={runtimeMode ? t("settings.progress.reduceMotionDescRuntime") : t("settings.progress.reduceMotionDescConcept")}
+            control={<Toggle label={t("settings.progress.reduceMotion")} checked={settings.reduceMotion} onChange={setFlag("reduceMotion")} />}
           />
           <SettingRow
-            title="低端设备模式"
-            description="默认关闭；启用后去除位移滤镜和高成本混合，仅保留静态三色面。"
-            control={<Toggle label="低端设备模式" checked={settings.lowEndMode} onChange={setFlag("lowEndMode")} />}
+            title={t("settings.progress.lowEnd")}
+            description={t("settings.progress.lowEndDesc")}
+            control={<Toggle label={t("settings.progress.lowEnd")} checked={settings.lowEndMode} onChange={setFlag("lowEndMode")} />}
           />
         </Section>
       </>
     ),
     diagnostics: (
       <>
-        <Section title="日志协议">
+        <Section title={t("settings.diagnostics.protocol")}>
           <SettingRow
-            title="最大可见日志"
-            description="超过上限后折叠为摘要，避免无限堆积。"
+            title={t("settings.diagnostics.maxLogs")}
+            description={t("settings.diagnostics.maxLogsDesc")}
             control={
-              <SelectControl label="最大可见日志" value={settings.logLimit} onChange={(value) => setFlag("logLimit")(Number(value))}>
-                <option value="40">40 行</option>
-                <option value="80">80 行</option>
-                <option value="120">120 行</option>
+              <SelectControl label={t("settings.diagnostics.maxLogs")} value={settings.logLimit} onChange={(value) => setFlag("logLimit")(Number(value))}>
+                <option value="40">{t("settings.diagnostics.lines", { count: 40 })}</option>
+                <option value="80">{t("settings.diagnostics.lines", { count: 80 })}</option>
+                <option value="120">{t("settings.diagnostics.lines", { count: 120 })}</option>
               </SelectControl>
             }
           />
           <SettingRow
-            title="结构化字段"
-            description="故障类别、证据、GitHub 映射、风险、阶段分列输出。"
+            title={t("settings.diagnostics.structured")}
+            description={t("settings.diagnostics.structuredDesc")}
             lock
-            control={<span className="locked-value">固定协议</span>}
+            control={<span className="locked-value">{t("settings.diagnostics.fixedProtocol")}</span>}
           />
           <SettingRow
-            title="诊断后自动导出日志"
-            description="默认关闭，避免未经用户决定产生额外文件。"
-            control={<Toggle label="诊断后自动导出日志" checked={settings.autoExportLogs} onChange={setFlag("autoExportLogs")} />}
+            title={t("settings.diagnostics.autoExport")}
+            description={t("settings.diagnostics.autoExportDesc")}
+            control={<Toggle label={t("settings.diagnostics.autoExport")} checked={settings.autoExportLogs} onChange={setFlag("autoExportLogs")} />}
           />
         </Section>
       </>
     ),
     safety: (
       <>
-        <Section title="安全门槛" description="4.0 视觉重构不得削弱 3.1.1 的边界。">
-          <SettingRow title="写入必须由用户决定" description="诊断结束只给出影响与预计动作。" lock control={<span className="locked-value">强制</span>} />
-          <SettingRow title="允许根路径" description="使用环境变量表达，不写入个人绝对路径。" lock control={<code>%USERPROFILE%\.codex\plugins</code>} />
-          <SettingRow title="顺序一致性" description="写入、替换、注册、回滚、最终核验保持可证明顺序。" lock control={<span className="locked-value">强制</span>} />
+        <Section title={t("settings.safety.gates")} description={t("settings.safety.gatesDesc")}>
+          <SettingRow title={t("settings.safety.userDecides")} description={t("settings.safety.userDecidesDesc")} lock control={<span className="locked-value">{t("settings.safety.enforced")}</span>} />
+          <SettingRow title={t("settings.safety.allowedRoot")} description={t("settings.safety.allowedRootDesc")} lock control={<code>%USERPROFILE%\.codex\plugins</code>} />
+          <SettingRow title={t("settings.safety.ordering")} description={t("settings.safety.orderingDesc")} lock control={<span className="locked-value">{t("settings.safety.enforced")}</span>} />
         </Section>
       </>
     ),
     backup: (
       <>
-        <Section title="备份与回滚">
-          <SettingRow title="写入前备份" description="只有用户选择修复后才创建；哈希与清单必须可验证。" lock control={<span className="locked-value">强制</span>} />
-          <SettingRow title="备份位置" description={runtimeMode ? "当前 alpha 不向渲染层暴露真实路径；备份由受控修复序列管理。" : "概念值使用环境变量，不包含个人路径。"} control={runtimeMode ? <span className="locked-value">由运行时管理</span> : <code>%LOCALAPPDATA%\WinBridge Recovery\Backups</code>} />
-          <SettingRow title="保留备份份数" description={runtimeMode ? "界面偏好；当前 alpha 尚未绑定真实备份轮转执行层。改变此值不会创建、删除或轮转备份。" : "仅保存设置值；概念站不会创建、删除或轮转真实备份。"} control={<SelectControl label="保留备份份数" value={settings.backupCopies} onChange={(value) => setFlag("backupCopies")(Number(value))}><option value="1">1 份</option><option value="2">2 份</option><option value="3">3 份</option></SelectControl>} />
-          <SettingRow title="回滚入口" description={runtimeMode ? "当前 preload 契约没有独立回滚命令；不会从设置页伪装执行。" : "结果页和设置中心均可找到，但不会自动执行。"} lock control={<span className="locked-value">{runtimeMode ? "尚未独立接入" : "可见"}</span>} />
+        <Section title={t("settings.backup.title")}>
+          <SettingRow title={t("settings.backup.beforeWrite")} description={t("settings.backup.beforeWriteDesc")} lock control={<span className="locked-value">{t("settings.safety.enforced")}</span>} />
+          <SettingRow title={t("settings.backup.location")} description={runtimeMode ? t("settings.backup.locationDescRuntime") : t("settings.backup.locationDescConcept")} control={runtimeMode ? <span className="locked-value">{t("settings.backup.managedByRuntime")}</span> : <code>%LOCALAPPDATA%\WinBridge Recovery\Backups</code>} />
+          <SettingRow title={t("settings.backup.copies")} description={runtimeMode ? t("settings.backup.copiesDescRuntime") : t("settings.backup.copiesDescConcept")} control={<SelectControl label={t("settings.backup.copies")} value={settings.backupCopies} onChange={(value) => setFlag("backupCopies")(Number(value))}><option value="1">{t("settings.backup.copiesValue", { count: 1 })}</option><option value="2">{t("settings.backup.copiesValue", { count: 2 })}</option><option value="3">{t("settings.backup.copiesValue", { count: 3 })}</option></SelectControl>} />
+          <SettingRow title={t("settings.backup.rollback")} description={runtimeMode ? t("settings.backup.rollbackDescRuntime") : t("settings.backup.rollbackDescConcept")} lock control={<span className="locked-value">{runtimeMode ? t("settings.backup.rollbackNotConnected") : t("settings.backup.rollbackVisible")}</span>} />
         </Section>
       </>
     ),
     plugins: (
-      <Section title="三插件独立状态" description="不合并、不用总分替代单项证据。">
+      <Section title={t("settings.plugins.title")} description={t("settings.plugins.titleDesc")}>
         <SettingRow
-          title={runtimeMode ? "运行时设置连接" : "网络能力只读探测"}
-          description={runtimeMode ? runtimeSettingsStatus.detail : "设置窗口先完成首帧显示；能力信息随后在后台只读更新，不阻塞构造。"}
-          control={<span className={`capability-value is-${runtimeMode ? runtimeSettingsStatus.tone : capabilityState}`}>{runtimeMode ? runtimeSettingsStatus.label : capabilityState === "ready" ? "只读更新完成" : "后台更新中…"}</span>}
+          title={runtimeMode ? t("settings.plugins.runtimeConnection") : t("settings.plugins.networkProbe")}
+          description={runtimeMode ? runtimeSettingsStatus.detail : t("settings.plugins.networkProbeDesc")}
+          control={<span className={`capability-value is-${runtimeMode ? runtimeSettingsStatus.tone : capabilityState}`}>{runtimeMode ? runtimeSettingsStatus.label : capabilityState === "ready" ? t("settings.plugins.probeReady") : t("settings.plugins.probePending")}</span>}
         />
         {pluginStates.map((plugin) => (
           <SettingRow
             key={plugin.id}
             title={plugin.name}
-            description={runtimeMode ? "这里只控制卡片显示与装饰色；插件健康状态仅来自本次只读诊断报告。" : `${plugin.state} · ${plugin.evidence}`}
-            control={<div className="plugin-setting-controls"><Toggle label={`显示 ${plugin.name} 详细证据`} checked={settings.pluginVisibility?.[plugin.id] !== false} onChange={(value) => setPluginVisible(plugin.id, value)} /><input aria-label={`${plugin.name} 装饰色`} type="color" value={pluginIdentityColors[pluginStates.findIndex((item) => item.id === plugin.id)]} onChange={(event) => setPluginColor(pluginStates.findIndex((item) => item.id === plugin.id), event.target.value)} /></div>}
+            description={runtimeMode ? t("settings.plugins.pluginDescRuntime") : `${t(plugin.state)} · ${t(plugin.evidence)}`}
+            control={<div className="plugin-setting-controls"><Toggle label={t("settings.plugins.showEvidence", { plugin: plugin.name })} checked={settings.pluginVisibility?.[plugin.id] !== false} onChange={(value) => setPluginVisible(plugin.id, value)} /><input aria-label={t("settings.plugins.colorAria", { plugin: plugin.name })} type="color" value={pluginIdentityColors[pluginStates.findIndex((item) => item.id === plugin.id)]} onChange={(event) => setPluginColor(pluginStates.findIndex((item) => item.id === plugin.id), event.target.value)} /></div>}
           />
         ))}
       </Section>
     ),
     social: (
       <>
-        <Section title="社交动态" description="只读网络附加能力；不可用或关闭时不影响诊断、报告、修复和日志。">
-          <SettingRow title="启用社交动态" description={runtimeMode ? "已映射到 native social.enabled；本机默认值由运行时加载，保存失败时禁止继续写入。" : "概念开关默认关闭；启用后只展示本地 mock 帖子。"} control={<Toggle label="启用社交动态" checked={settings.socialEnabled} onChange={setFlag("socialEnabled")} />} />
-          {[["tibo", "Tibo"], ["openai", "OpenAI"], ["chatgpt", "ChatGPT"]].map(([id, label]) => <SettingRow key={id} title={label} description={runtimeMode ? "固定只读账户；已映射到 native social.accounts，不允许填写任意账户。" : "固定只读账户；概念态默认关闭，不允许填写任意账户。"} control={<Toggle label={`显示 ${label} 动态`} checked={settings.socialAccounts?.[id] === true} onChange={(value) => setSettings((current) => ({ ...current, socialAccounts: { ...current.socialAccounts, [id]: value } }))} />} />)}
+        <Section title={t("settings.social.title")} description={t("settings.social.titleDesc")}>
+          <SettingRow title={t("settings.social.enable")} description={runtimeMode ? t("settings.social.enableDescRuntime") : t("settings.social.enableDescConcept")} control={<Toggle label={t("settings.social.enable")} checked={settings.socialEnabled} onChange={setFlag("socialEnabled")} />} />
+          {[["tibo", "Tibo"], ["openai", "OpenAI"], ["chatgpt", "ChatGPT"]].map(([id, label]) => <SettingRow key={id} title={label} description={runtimeMode ? t("settings.social.accountDescRuntime") : t("settings.social.accountDescConcept")} control={<Toggle label={t("settings.social.showAccount", { account: label })} checked={settings.socialAccounts?.[id] === true} onChange={(value) => setSettings((current) => ({ ...current, socialAccounts: { ...current.socialAccounts, [id]: value } }))} />} />)}
         </Section>
-        <Section title="范围与翻译" description="请求始终有界：最多 10 条，时间范围 24–72 小时。">
-          <SettingRow title="最大帖子数" description={runtimeMode ? "映射 native social.maxPosts，并继续作为单次只读请求与 DOM 上限。" : "只控制单次本地 mock 与 DOM 上限。"} control={<label className="range-control"><input type="range" min="1" max="10" step="1" value={settings.socialMaxPosts} onChange={(event) => setFlag("socialMaxPosts")(Number(event.target.value))}/><span>{settings.socialMaxPosts}</span></label>} />
-          <SettingRow title="时间范围" description={runtimeMode ? "映射 native social.hours；不会为填满数量自动扩大范围。" : "默认 48 小时；不会为填满数量自动扩大范围。"} control={<label className="range-control"><input type="range" min="24" max="72" step="12" value={settings.socialHours} onChange={(event) => setFlag("socialHours")(Number(event.target.value))}/><span>{settings.socialHours}h</span></label>} />
-          <SettingRow title="翻译目标语言" description={runtimeMode ? "映射 native social.locale；翻译仍按帖子显式触发，失败只影响当前帖子。" : "翻译按帖子显式触发；失败只影响当前本地 mock 帖子。"} control={<SelectControl label="社交动态翻译目标语言" value={settings.socialLocale} onChange={setFlag("socialLocale")}><option value="zh">中文</option><option value="en">English</option><option value="fr">Français</option><option value="es">Español</option><option value="ru">Русский</option><option value="ar">العربية</option></SelectControl>} />
-          <SettingRow title="使用 Jina 只读降级" description={runtimeMode ? "映射 native social.useJinaFallback；是否可用仍由运行时安全网络层决定，Renderer 不直接联网。" : "概念开关；本地 mock 不会发起网络请求。"} control={<Toggle label="使用 Jina 只读降级" checked={settings.socialUseJinaFallback} onChange={setFlag("socialUseJinaFallback")} />} />
+        <Section title={t("settings.social.scope")} description={t("settings.social.scopeDesc")}>
+          <SettingRow title={t("settings.social.maxPosts")} description={runtimeMode ? t("settings.social.maxPostsDescRuntime") : t("settings.social.maxPostsDescConcept")} control={<label className="range-control"><input type="range" min="1" max="10" step="1" value={settings.socialMaxPosts} onChange={(event) => setFlag("socialMaxPosts")(Number(event.target.value))}/><span>{settings.socialMaxPosts}</span></label>} />
+          <SettingRow title={t("settings.social.hours")} description={runtimeMode ? t("settings.social.hoursDescRuntime") : t("settings.social.hoursDescConcept")} control={<label className="range-control"><input type="range" min="24" max="72" step="12" value={settings.socialHours} onChange={(event) => setFlag("socialHours")(Number(event.target.value))}/><span>{settings.socialHours}h</span></label>} />
+          <SettingRow title={t("settings.social.targetLocale")} description={runtimeMode ? t("settings.social.targetLocaleDescRuntime") : t("settings.social.targetLocaleDescConcept")} control={<SelectControl label={t("settings.social.targetLocaleAria")} value={settings.socialLocale} onChange={setFlag("socialLocale")}><option value="zh" lang="zh">中文</option><option value="en" lang="en">English</option><option value="fr" lang="fr">Français</option><option value="es" lang="es">Español</option><option value="ru" lang="ru">Русский</option><option value="ar" lang="ar">العربية</option></SelectControl>} />
+          <SettingRow title={t("settings.social.jina")} description={runtimeMode ? t("settings.social.jinaDescRuntime") : t("settings.social.jinaDescConcept")} control={<Toggle label={t("settings.social.jina")} checked={settings.socialUseJinaFallback} onChange={setFlag("socialUseJinaFallback")} />} />
         </Section>
       </>
     ),
     games: (
-      <Section title="小游戏选择" description="齿轮菜单仍只有一个“小游戏”入口；点击后在同一窗口并列两款。">
+      <Section title={t("settings.games.title")} description={t("settings.games.titleDesc")}>
         <div className="settings-games">
-          <article><strong>Snake</strong><p>蛇身、分数、暂停与重开入口保留。</p><button type="button" className="mini-button">预览卡片</button></article>
-          <article><strong>Minesweeper</strong><p>难度、计时、雷数与重开入口保留。</p><button type="button" className="mini-button">预览卡片</button></article>
+          <article><strong>Snake</strong><p>{t("settings.games.snakeDesc")}</p><button type="button" className="mini-button">{t("settings.games.previewCard")}</button></article>
+          <article><strong>Minesweeper</strong><p>{t("settings.games.minesweeperDesc")}</p><button type="button" className="mini-button">{t("settings.games.previewCard")}</button></article>
         </div>
       </Section>
     ),
     performance: (
       <>
-        <Section title="显示与性能">
+        <Section title={t("settings.performance.title")}>
           <SettingRow
-            title="DPI 预览"
-            description="布局使用弹性单位与像素对齐，不依赖固定分辨率。"
+            title={t("settings.performance.dpi")}
+            description={t("settings.performance.dpiDesc")}
             control={
-              <SelectControl label="DPI 预览" value={settings.dpi} onChange={setFlag("dpi")}>
+              <SelectControl label={t("settings.performance.dpi")} value={settings.dpi} onChange={setFlag("dpi")}>
                 <option value="100">100%</option>
                 <option value="125">125%</option>
                 <option value="150">150%</option>
@@ -369,50 +376,50 @@ export default function SettingsCenter({
               </SelectControl>
             }
           />
-          <SettingRow title="减少动态效果" description="与进度设置联动。" control={<Toggle label="减少动态效果" checked={settings.reduceMotion} onChange={setFlag("reduceMotion")} />} />
-          <SettingRow title="低端设备模式" description="与进度设置联动。" control={<Toggle label="低端设备模式" checked={settings.lowEndMode} onChange={setFlag("lowEndMode")} />} />
+          <SettingRow title={t("settings.progress.reduceMotion")} description={t("settings.performance.linked")} control={<Toggle label={t("settings.progress.reduceMotion")} checked={settings.reduceMotion} onChange={setFlag("reduceMotion")} />} />
+          <SettingRow title={t("settings.progress.lowEnd")} description={t("settings.performance.linked")} control={<Toggle label={t("settings.progress.lowEnd")} checked={settings.lowEndMode} onChange={setFlag("lowEndMode")} />} />
         </Section>
       </>
     ),
     about: (
-      <><Section title="4.0 入口图标系统" description="24×24 数学网格；主品牌图标本轮保持不变。">
-        <div className="menu-icon-preview" aria-label="一级菜单原创图标预览">{[["games","小游戏"],["theme","主题"],["observe","看看他"],["settings","更多设置"]].map(([name,label]) => <span key={name}><MenuGlyph name={name} size={24}/><small>{label}</small></span>)}</div>
-      </Section><Section title={runtimeMode ? "关于本机运行态" : "关于本概念"}>
+      <><Section title={t("settings.about.icons")} description={t("settings.about.iconsDesc")}>
+        <div className="menu-icon-preview" aria-label={t("settings.about.iconsAria")}>{[["games", "gear.games"], ["theme", "gear.theme"], ["observe", "gear.social"], ["settings", "gear.settings"]].map(([name, labelKey]) => <span key={name}><MenuGlyph name={name} size={24}/><small>{t(labelKey)}</small></span>)}</div>
+      </Section><Section title={runtimeMode ? t("settings.about.runtimeTitle") : t("settings.about.conceptTitle")}>
         <div className="about-note">
-          <strong>{runtimeMode ? "WinBridge Recovery 4.0 alpha · 本机运行态" : "WinBridge Recovery 4.0 · 预发布概念"}</strong>
-          <p>{runtimeMode ? "冻结 3.1.1 核心；先执行只读诊断，展示报告后仅在用户明确确认时进入受控修复。" : "仅用于方案选择和配置导出；不连接正式修复引擎，不修改 3.1.1。"}</p>
+          <strong>{runtimeMode ? t("settings.about.runtimeName") : t("settings.about.conceptName")}</strong>
+          <p>{runtimeMode ? t("settings.about.runtimeBody") : t("settings.about.conceptBody")}</p>
           <dl>
-            <div><dt>流体实现</dt><dd>MIT 上游引擎 + 独立 React 适配层</dd></div>
-            <div><dt>流体来源</dt><dd>nebula-capsules-guanyu-lab · MIT · 固定提交 aef3f7d010a721e00404ec8dc69239714e38e77c；分发时保留许可与版权声明</dd></div>
-            <div><dt>图标系统</dt><dd>项目原创矢量</dd></div>
-            <div><dt>{runtimeMode ? "修复协议" : "正式文件"}</dt><dd>{runtimeMode ? "DiagnoseOnly → ShowReport → AwaitDecision" : "未触碰"}</dd></div>
+            <div><dt>{t("settings.about.fluidImpl")}</dt><dd>{t("settings.about.fluidImplValue")}</dd></div>
+            <div><dt>{t("settings.about.fluidSource")}</dt><dd>{t("settings.about.fluidSourceValue")}</dd></div>
+            <div><dt>{t("settings.about.iconSystem")}</dt><dd>{t("settings.about.iconSystemValue")}</dd></div>
+            <div><dt>{runtimeMode ? t("settings.about.repairProtocol") : t("settings.about.officialFiles")}</dt><dd>{runtimeMode ? "DiagnoseOnly → ShowReport → AwaitDecision" : t("settings.about.untouched")}</dd></div>
           </dl>
         </div>
       </Section></>
     ),
   };
 
-  const activeLabel = settingCategories.find((item) => item.id === active)?.label ?? "设置";
+  const activeLabel = settingCategories.some((item) => item.id === active) ? t(`settings.category.${active}`) : t("settings.heading");
 
   return createPortal(
     <div className={`settings-backdrop palette-${mix.colorPreset === "custom" ? mix.baseColorPreset : mix.colorPreset} material-${mix.material} settings-mode-${mix.settingsLayout}`} data-color-selection={mix.colorPreset} style={{ "--app-accent": mix.accent, "--app-accent-secondary": mix.secondaryAccent, "--app-radius": `${mix.cornerRadius}px` }} role="presentation">
-      <section className="settings-window" role="dialog" aria-modal="true" aria-label="WinBridge Recovery 4.0 设置中心">
+      <section className="settings-window" role="dialog" aria-modal="true" aria-label={t("settings.dialogAria")}>
         <header className="settings-titlebar">
           <div>
             <span className="settings-mark"><MenuGlyph name="settings" size={17} /></span>
-            <strong>设置中心</strong>
-            <span className={`capability-chip is-${runtimeMode ? runtimeSettingsStatus.tone : capabilityState}`}>{runtimeMode ? `窗口已显示 · ${runtimeSettingsStatus.label}` : capabilityState === "ready" ? "窗口已显示 · 网络能力已异步更新" : "窗口已显示 · 网络能力后台更新中"}</span>
+            <strong>{t("settings.title")}</strong>
+            <span className={`capability-chip is-${runtimeMode ? runtimeSettingsStatus.tone : capabilityState}`}>{runtimeMode ? t("settings.chipRuntime", { status: runtimeSettingsStatus.label }) : capabilityState === "ready" ? t("settings.chipConceptReady") : t("settings.chipConceptPending")}</span>
           </div>
-          <button type="button" aria-label="关闭设置" onClick={onClose}><Icon name="close" size={17} /></button>
+          <button type="button" aria-label={t("settings.closeAria")} onClick={onClose}><Icon name="close" size={17} /></button>
         </header>
         <div className="settings-layout">
           <aside className="settings-sidebar">
             <label className="settings-search">
               <Icon name="search" size={15} />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索设置" />
+              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t("settings.searchPlaceholder")} aria-label={t("settings.searchPlaceholder")} />
               <kbd>Ctrl F</kbd>
             </label>
-            <nav aria-label="设置分类">
+            <nav aria-label={t("settings.navAria")}>
               {visibleCategories.map((item) => (
                 <button
                   type="button"
@@ -421,27 +428,27 @@ export default function SettingsCenter({
                   onClick={() => setActive(item.id)}
                 >
                   <span className="nav-dot" />
-                  {item.label}
+                  {t(`settings.category.${item.id}`)}
                 </button>
               ))}
             </nav>
             <div className="settings-scope-note">
               <Icon name="shield" size={16} />
-              <span>{runtimeMode ? "4.0 alpha 本机设置" : "概念设置"}<br /><small>{runtimeMode ? runtimeSettingsStatus.label : "不写入正式配置"}</small></span>
+              <span>{runtimeMode ? t("settings.scopeRuntime") : t("settings.scopeConcept")}<br /><small>{runtimeMode ? runtimeSettingsStatus.label : t("settings.scopeConceptNote")}</small></span>
             </div>
           </aside>
           <main className="settings-content">
             <header className="settings-sticky-title">
-              <div><span>设置</span><h3>{activeLabel}</h3></div>
-              <span className="settings-scheme">{scheme.name}</span>
+              <div><span>{t("settings.heading")}</span><h3>{activeLabel}</h3></div>
+              <span className="settings-scheme">{schemeName(scheme)}</span>
             </header>
             <div className="settings-scroll">{content[active]}</div>
           </main>
         </div>
         <footer className="settings-footer">
-          <span>{importMessage || (runtimeMode ? runtimeSettingsStatus.detail : "新增设置默认均为关闭；强制安全协议不提供绕过开关。")}</span>
+          <span>{importMessage ? t(importMessage) : (runtimeMode ? runtimeSettingsStatus.detail : t("settings.footerDefault"))}</span>
           <input ref={importRef} className="settings-import-input" type="file" accept="application/json,.json" onChange={importFile}/>
-          <div><button type="button" className="secondary-button" onClick={onRestoreDefaults}>恢复默认</button><button type="button" className="secondary-button" onClick={() => importRef.current?.click()}>导入 JSON</button><button type="button" className="secondary-button" onClick={onExportConfig}>导出 JSON</button><button type="button" className="primary-button" onClick={onClose}>完成</button></div>
+          <div><button type="button" className="secondary-button" onClick={onRestoreDefaults}>{t("settings.restoreDefaults")}</button><button type="button" className="secondary-button" onClick={() => importRef.current?.click()}>{t("settings.importJson")}</button><button type="button" className="secondary-button" onClick={onExportConfig}>{t("settings.exportJson")}</button><button type="button" className="primary-button" onClick={onClose}>{t("settings.done")}</button></div>
         </footer>
       </section>
     </div>,

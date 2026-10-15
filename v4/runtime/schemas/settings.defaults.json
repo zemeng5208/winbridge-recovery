@@ -8,6 +8,7 @@
   "logMemoryLimitBytes": 1048576,
   "autoCloseAfterRepair": false,
   "autoCloseAfterRepairExplicit": false,
+  "language": "zh-CN",
   "social": {
     "enabled": true,
     "accounts": { "tibo": true, "openai": true, "chatgpt": true },

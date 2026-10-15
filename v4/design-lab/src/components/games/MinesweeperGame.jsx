@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "../Icons.jsx";
+import { useI18n } from "../../i18n/I18nProvider.jsx";
 
 const DIFFICULTIES = Object.freeze({
-  beginner: { id: "beginner", label: "初级", rows: 9, cols: 9, mines: 10, cellSize: 28 },
-  intermediate: { id: "intermediate", label: "中级", rows: 16, cols: 16, mines: 40, cellSize: 22 },
+  beginner: { id: "beginner", rows: 9, cols: 9, mines: 10, cellSize: 28 },
+  intermediate: { id: "intermediate", rows: 16, cols: 16, mines: 40, cellSize: 22 },
 });
 
 function createGame(difficultyId) {
@@ -73,14 +74,8 @@ function revealArea(startIndex, mines, config, existingRevealed, flagged) {
   return revealed;
 }
 
-const STATUS_LABELS = Object.freeze({
-  ready: "等待首击",
-  running: "排雷中",
-  won: "已完成",
-  lost: "触雷结束",
-});
-
 export default function MinesweeperGame() {
+  const t = useI18n();
   const [game, setGame] = useState(() => createGame("beginner"));
   const config = DIFFICULTIES[game.difficultyId];
 
@@ -124,23 +119,23 @@ export default function MinesweeperGame() {
   return (
     <div className="local-game minesweeper-game">
       <div className="game-toolbar minesweeper-toolbar">
-        <div className="difficulty-switch" role="group" aria-label="扫雷难度">
-          {Object.values(DIFFICULTIES).map((difficulty) => <button type="button" key={difficulty.id} className={difficulty.id === game.difficultyId ? "is-selected" : ""} onClick={() => restart(difficulty.id)}>{difficulty.label}</button>)}
+        <div className="difficulty-switch" role="group" aria-label={t("games.minesweeper.difficultyAria")}>
+          {Object.values(DIFFICULTIES).map((difficulty) => <button type="button" key={difficulty.id} className={difficulty.id === game.difficultyId ? "is-selected" : ""} onClick={() => restart(difficulty.id)}>{t(`games.minesweeper.difficulty.${difficulty.id}`)}</button>)}
         </div>
-        <div className="game-metric"><span>剩余雷数</span><strong>{remainingMines}</strong></div>
-        <div className="game-metric"><span>时间</span><strong>{String(game.elapsed).padStart(3, "0")}</strong></div>
-        <div className={`game-status status-${game.status}`}><i/>{STATUS_LABELS[game.status]}</div>
-        <button type="button" className="game-restart-button" onClick={() => restart()}><Icon name="restart" size={15}/>重新开始</button>
+        <div className="game-metric"><span>{t("games.minesweeper.remaining")}</span><strong>{remainingMines}</strong></div>
+        <div className="game-metric"><span>{t("games.minesweeper.time")}</span><strong>{String(game.elapsed).padStart(3, "0")}</strong></div>
+        <div className={`game-status status-${game.status}`}><i/>{t(`games.minesweeper.status.${game.status}`)}</div>
+        <button type="button" className="game-restart-button" onClick={() => restart()}><Icon name="restart" size={15}/>{t("games.restart")}</button>
       </div>
       <div className="mine-board-viewport">
-        <div className="mine-board" role="grid" aria-label={`${config.label}扫雷棋盘`} style={{ "--mine-columns": config.cols, "--mine-cell-size": `${config.cellSize}px` }} onContextMenu={(event) => event.preventDefault()}>
+        <div className="mine-board" role="grid" aria-label={t("games.minesweeper.boardAria", { difficulty: t(`games.minesweeper.difficulty.${config.id}`) })} style={{ "--mine-columns": config.cols, "--mine-cell-size": `${config.cellSize}px` }} onContextMenu={(event) => event.preventDefault()}>
           {cells.map((index) => {
             const revealed = game.revealed.has(index);
             const flagged = game.flagged.has(index);
             const mine = Boolean(game.mines?.has(index));
             const showMine = mine && (game.status === "lost" || game.status === "won");
             const count = revealed && game.mines ? adjacentMineCount(index, game.mines, config) : 0;
-            const label = flagged ? `第 ${index + 1} 格，已插旗` : revealed ? `第 ${index + 1} 格，${count ? `相邻 ${count} 个雷` : "空白"}` : `第 ${index + 1} 格，未揭示`;
+            const label = flagged ? t("games.minesweeper.cellFlagged", { n: index + 1 }) : revealed ? (count ? t("games.minesweeper.cellAdjacent", { n: index + 1, count }) : t("games.minesweeper.cellEmpty", { n: index + 1 })) : t("games.minesweeper.cellHidden", { n: index + 1 });
             return (
               <button
                 type="button"
@@ -158,10 +153,10 @@ export default function MinesweeperGame() {
               </button>
             );
           })}
-          {game.status === "won" || game.status === "lost" ? <div className="mine-result-message"><strong>{game.status === "won" ? "排雷完成" : "本局结束"}</strong><span>{game.status === "won" ? `用时 ${game.elapsed} 秒` : "触雷后可重新开始"}</span><button type="button" onClick={() => restart()}>重新开始</button></div> : null}
+          {game.status === "won" || game.status === "lost" ? <div className="mine-result-message"><strong>{game.status === "won" ? t("games.minesweeper.cleared") : t("games.gameOver")}</strong><span>{game.status === "won" ? t("games.minesweeper.elapsed", { seconds: game.elapsed }) : t("games.minesweeper.lostHint")}</span><button type="button" onClick={() => restart()}>{t("games.restart")}</button></div> : null}
         </div>
       </div>
-      <p className="game-help">左键揭示，右键插旗。首次揭示格及其周围区域不会布雷。</p>
+      <p className="game-help">{t("games.minesweeper.help")}</p>
     </div>
   );
 }

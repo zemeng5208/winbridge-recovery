@@ -1,10 +1,11 @@
 import { colorPresets, preservationRows, schemes } from "../data/concepts.js";
+import { DEFAULT_LOCALE, LANGUAGE_PREFERENCES, SUPPORTED_LOCALES, resolveLocale } from "../i18n/index.js";
 
 export const CONFIG_SCHEMA = "winbridge-recovery-4.0-settings/v1";
 export const STORAGE_KEY = "winbridge-recovery-4.0.settings.v1";
 
 export const DEFAULT_LAB_SETTINGS = Object.freeze({
-  language: "zh-CN",
+  language: DEFAULT_LOCALE,
   launchBehavior: "diagnose",
   followSystemTheme: false,
   reduceMotion: false,
@@ -60,7 +61,7 @@ const mixEnums = {
 };
 
 const settingEnums = {
-  language: ["zh-CN", "en-US"],
+  language: LANGUAGE_PREFERENCES,
   launchBehavior: ["diagnose", "open-gpt"],
   logRetention: ["session", "7-days", "30-days"],
   dpi: ["100", "125", "150", "200"],
@@ -77,7 +78,6 @@ const isHex = (value) => typeof value === "string" && /^#[0-9a-f]{6}$/i.test(val
 const enumValue = (value, values, fallback) => values.includes(value) ? value : fallback;
 const cloneDefaults = () => ({
   schema: CONFIG_SCHEMA,
-  locale: "zh-CN",
   schemeId: schemes[0].id,
   mix: { ...DEFAULT_MIX, channels: [...DEFAULT_MIX.channels], pluginColors: [...DEFAULT_MIX.pluginColors] },
   settings: { ...DEFAULT_LAB_SETTINGS, socialAccounts: { ...DEFAULT_LAB_SETTINGS.socialAccounts }, pluginVisibility: { ...DEFAULT_LAB_SETTINGS.pluginVisibility } },
@@ -99,9 +99,15 @@ export function normalizeUiState(candidate = {}) {
   const rawChannels = rawMix.channels ?? candidate.fluidProgress?.channels;
   const rawPluginColors = rawMix.pluginColors ?? rawMix.pluginIdentityColors;
 
+  // settings.language is the single source of truth. Exports before this
+  // change also carried a top-level "locale" that was always "zh-CN", so it is
+  // only consulted when settings.language is absent or invalid.
+  const language = LANGUAGE_PREFERENCES.includes(rawSettings.language)
+    ? rawSettings.language
+    : enumValue(candidate.locale, SUPPORTED_LOCALES, defaults.settings.language);
+
   return {
     schema: CONFIG_SCHEMA,
-    locale: enumValue(candidate.locale, ["zh-CN", "en-US"], defaults.locale),
     schemeId: schemes.some((item) => item.id === schemeId) ? schemeId : defaults.schemeId,
     mix: {
       ...defaults.mix,
@@ -123,6 +129,7 @@ export function normalizeUiState(candidate = {}) {
     settings: {
       ...defaults.settings,
       ...Object.fromEntries(Object.entries(settingEnums).map(([key, values]) => [key, enumValue(rawSettings[key], values, defaults.settings[key])])),
+      language,
       ...Object.fromEntries(["followSystemTheme", "reduceMotion", "lowEndMode", "launchAtLogin", "backgroundUpdates", "autoExportLogs", "logAutoFollow", "stageAnimation", "socialEnabled", "socialUseJinaFallback"].map((key) => [key, rawSettings[key] === undefined ? defaults.settings[key] : Boolean(rawSettings[key])])),
       autoCloseAfterRepairExplicit: rawSettings.autoCloseAfterRepairExplicit === true,
       autoCloseAfterRepair: rawSettings.autoCloseAfterRepairExplicit === true && rawSettings.autoCloseAfterRepair === true,
@@ -162,11 +169,12 @@ export function saveUiState(state) {
   }
 }
 
-export function buildConceptConfig({ scheme, mix, settings, progress }) {
+export function buildConceptConfig({ scheme, mix, settings, progress, systemLanguages }) {
   const normalized = normalizeUiState({ schemeId: scheme.id, mix, settings });
   return {
     schema: CONFIG_SCHEMA,
-    locale: normalized.locale,
+    // Kept for older importers; derived from settings.language, never stored separately.
+    locale: resolveLocale(normalized.settings.language, systemLanguages),
     conceptOnly: true,
     layout: { id: normalized.schemeId },
     appearance: { ...normalized.mix, relationship: "layout x material x color", semanticColorsLocked: true },

@@ -40,6 +40,10 @@ const REPORT_ONLY = new Set([
 
 const ALL_CATEGORIES = new Set([...REPAIR_SUGGEST_ONLY, ...REPORT_ONLY]);
 const TERMINAL_STATES = new Set(['Failed', 'Cancelled', 'ResultReady']);
+// Interface language. "system" follows the Windows display language; settings
+// files written before this field existed resolve to the original zh-CN UI.
+const LANGUAGE_PREFERENCES = Object.freeze(['system', 'zh-CN', 'en-US']);
+const FIRST_RUN_LANGUAGE = 'system';
 
 const DEFAULT_SETTINGS = Object.freeze({
   schemaVersion: 1,
@@ -51,6 +55,7 @@ const DEFAULT_SETTINGS = Object.freeze({
   logMemoryLimitBytes: 1048576,
   autoCloseAfterRepair: false,
   autoCloseAfterRepairExplicit: false,
+  language: 'zh-CN',
   social: DEFAULT_SOCIAL_SETTINGS
 });
 
@@ -122,6 +127,9 @@ function validateSettings(input) {
   assertBoolean(result.autoCloseAfterRepairExplicit, 'settings.autoCloseAfterRepairExplicit');
   if (result.autoCloseAfterRepair && !result.autoCloseAfterRepairExplicit) {
     throw new TypeError('autoCloseAfterRepair requires explicit user opt-in marker');
+  }
+  if (!LANGUAGE_PREFERENCES.includes(result.language)) {
+    throw new TypeError('settings.language is invalid');
   }
   result.social = validateSocialSettings(result.social);
   return result;
@@ -231,6 +239,8 @@ module.exports = {
   REPORT_ONLY,
   ALL_CATEGORIES,
   DEFAULT_SETTINGS,
+  FIRST_RUN_LANGUAGE,
+  LANGUAGE_PREFERENCES,
   TERMINAL_STATES,
   isPlainObject,
   assertPlainObject,

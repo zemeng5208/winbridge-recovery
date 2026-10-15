@@ -1,6 +1,8 @@
 import { preservationRows, schemes } from "../data/concepts.js";
+import { useI18n } from "../i18n/I18nProvider.jsx";
 
 export default function SchemePicker({ selected, onSelect }) {
+  const t = useI18n();
   return (
     <section className="scheme-picker" aria-label="五套布局方案">
       <header>
@@ -17,7 +19,7 @@ export default function SchemePicker({ selected, onSelect }) {
             aria-pressed={selected.id === scheme.id}
           >
             <span className={`layout-mini layout-mini-${scheme.code.toLowerCase()}`} aria-hidden="true"><i/><i/><i/><i/></span>
-            <span className="scheme-choice-copy"><strong>{scheme.name}</strong><small>{scheme.english}</small></span>
+            <span className="scheme-choice-copy"><strong>{t(`scheme.${scheme.id}.name`)}</strong><small>{scheme.english}</small></span>
             <span className="scheme-score">保留项 {preservationRows.length}/{preservationRows.length}</span>
           </button>
         ))}

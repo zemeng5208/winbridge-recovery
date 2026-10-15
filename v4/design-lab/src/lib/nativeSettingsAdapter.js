@@ -1,3 +1,7 @@
+import { DEFAULT_LOCALE, LANGUAGE_PREFERENCES, normalizeLanguagePreference } from "../i18n/index.js";
+
+// language is intentionally absent: a missing value must never overwrite the
+// interface language before the runtime's saved settings have been read.
 export const NATIVE_SETTINGS_DEFAULTS = Object.freeze({
   schemaVersion: 1,
   theme: "system",
@@ -61,6 +65,7 @@ export function toNativeSettings(uiState, nativeBase = NATIVE_SETTINGS_DEFAULTS)
     logMemoryLimitBytes: clampInteger(nativeBase?.logMemoryLimitBytes, 262144, 4194304, NATIVE_SETTINGS_DEFAULTS.logMemoryLimitBytes),
     autoCloseAfterRepair,
     autoCloseAfterRepairExplicit,
+    language: normalizeLanguagePreference(settings.language, DEFAULT_LOCALE),
     social: toNativeSocial(settings),
   };
 }
@@ -84,6 +89,7 @@ export function mergeNativeSettings(uiState, nativeValue) {
       reduceMotion: nativeValue.reduceMotion === true,
       autoCloseAfterRepair: nativeValue.autoCloseAfterRepair === true && nativeValue.autoCloseAfterRepairExplicit === true,
       autoCloseAfterRepairExplicit: nativeValue.autoCloseAfterRepairExplicit === true,
+      ...(LANGUAGE_PREFERENCES.includes(nativeValue.language) ? { language: nativeValue.language } : {}),
       ...(nativeSocial ? {
         socialEnabled: nativeSocial.enabled === true,
         socialAccounts: {

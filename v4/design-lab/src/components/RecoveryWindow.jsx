@@ -11,6 +11,8 @@ import { MenuGlyph } from "./BrandIcon.jsx";
 import { createRuntimeController } from "../lib/runtimeController.js";
 import GameCenter from "./games/GameCenter.jsx";
 import winbridgeMark from "../assets/WinBridge.png";
+import { useI18n } from "../i18n/I18nProvider.jsx";
+import { formatMessage, uiMessage } from "../i18n/index.js";
 
 const activeStageByFlow = {
   Diagnosing: 0,
@@ -21,6 +23,7 @@ const activeStageByFlow = {
 };
 
 function StageRail({ flowState, progress, reduceMotion, desktopStarted }) {
+  const t = useI18n();
   const engineIndex = flowState === "ResultReady" ? 5 : desktopStarted ? 4 : (activeStageByFlow[flowState] ?? -1);
   const [presentedIndex, setPresentedIndex] = useState(engineIndex);
   const [transitionPhase, setTransitionPhase] = useState("steady");
@@ -63,8 +66,8 @@ function StageRail({ flowState, progress, reduceMotion, desktopStarted }) {
 
   useEffect(() => () => window.clearTimeout(queueTimerRef.current), []);
   return (
-    <aside className="stage-rail" aria-label="诊断 1 到 5 阶段，真实状态与呈现状态分离">
-      <div className="rail-heading"><span>诊断阶段</span><small>ENGINE {engineIndex < 0 ? "WAIT" : engineIndex} · PRESENTED {presentedIndex < 0 ? "WAIT" : presentedIndex}</small></div>
+    <aside className="stage-rail" aria-label={t("stages.ariaLabel")}>
+      <div className="rail-heading"><span>{t("stages.heading")}</span><small>ENGINE {engineIndex < 0 ? "WAIT" : engineIndex} · PRESENTED {presentedIndex < 0 ? "WAIT" : presentedIndex}</small></div>
       <ol>
         {diagnosticStages.map((stage, index) => {
           let state = index < presentedIndex ? "done" : index === presentedIndex && presentedIndex < 5 ? "active" : "waiting";
@@ -72,19 +75,19 @@ function StageRail({ flowState, progress, reduceMotion, desktopStarted }) {
           if (index === presentedIndex && transitionPhase === "activating") state = "activating";
           const localProgress = state === "done" ? 1 : state === "active" ? Math.max(0.16, Math.min(0.98, (progress % 20) / 20 + 0.16)) : 0;
           const stageDetail = stage.id === 4
-            ? flowState === "Repairing" ? "修复中" : flowState === "ResultReady" || desktopStarted ? "修复完成" : "等待用户决定"
-            : stage.id === 5 && desktopStarted && flowState !== "ResultReady" ? "桌面端已启动，正在核验" : stage.detail;
+            ? flowState === "Repairing" ? t("stages.detail.repairing") : flowState === "ResultReady" || desktopStarted ? t("stages.detail.repairStepsCompleted") : t("stages.4.detail")
+            : stage.id === 5 && desktopStarted && flowState !== "ResultReady" ? t("stages.detail.desktopVerifying") : t(`stages.${stage.id}.detail`);
           const stateLabel = stage.id === 4 && state === "active" && flowState === "AwaitingDecision"
-            ? "等待决定"
+            ? t("stages.state.awaitingDecision")
             : stage.id === 4 && state === "active" && flowState === "Repairing"
-              ? "修复中"
+              ? t("stages.state.repairing")
               : stage.id === 5 && state === "active" && desktopStarted
-                ? "正在核验"
-                : state === "done" ? "已完成" : state === "completing" ? "收束完成" : state === "activating" ? "正在进入" : state === "active" ? "进行中" : "等待中";
+                ? t("stages.state.verifying")
+                : t(`stages.state.${state === "done" ? "done" : state === "completing" ? "completing" : state === "activating" ? "activating" : state === "active" ? "active" : "waiting"}`);
           return (
-            <li key={stage.id} className={`stage-${state}`} data-interaction="status-driven" title="由流程状态与全局进度驱动，不是导航或修复按钮">
+            <li key={stage.id} className={`stage-${state}`} data-interaction="status-driven" title={t("stages.itemTitle")}>
               <StageProgressOrbit index={stage.id} state={state === "completing" ? "active" : state === "activating" ? "active" : state} progress={state === "completing" ? 1 : state === "activating" ? 0.35 : localProgress} reduceMotion={reduceMotion} />
-              <div><strong>{stage.title}</strong><small>{stateLabel} · {stageDetail}</small></div>
+              <div><strong>{t(`stages.${stage.id}.title`)}</strong><small>{stateLabel} · {stageDetail}</small></div>
             </li>
           );
         })}
@@ -113,37 +116,42 @@ function renderLogMessage(message) {
 }
 
 function TerminalPanel({ logs, limit }) {
+  const t = useI18n();
   const [filter, setFilter] = useState("all");
   const [followPaused, setFollowPaused] = useState(false);
   const categories = useMemo(() => ["all", ...new Set(logs.map((line) => line.category))], [logs]);
   const visibleLogs = useMemo(() => filter === "all" ? logs : logs.filter((line) => line.category === filter), [filter, logs]);
+  const categoryLabels = useMemo(() => new Map(logs.filter((line) => line.categoryKey).map((line) => [line.category, t(line.categoryKey)])), [logs, t]);
   return (
-    <section className="terminal-panel" aria-label="实时终端与结构化日志">
+    <section className="terminal-panel" aria-label={t("terminal.ariaLabel")}>
       <header>
-        <div><span className="terminal-lamp" /><strong>实时终端</strong><small>结构化证据流</small></div>
+        <div><span className="terminal-lamp" /><strong>{t("terminal.title")}</strong><small>{t("terminal.subtitle")}</small></div>
         <div className="terminal-tools">
-          <span className="log-cap">{logs.length} / {limit} · 批次渲染</span>
-          <select aria-label="日志类别筛选" value={filter} onChange={(event) => setFilter(event.target.value)}>
-            {categories.map((category) => <option key={category} value={category}>{category === "all" ? "全部类别" : category}</option>)}
+          <span className="log-cap">{t("terminal.capacity", { count: logs.length, limit })}</span>
+          <select aria-label={t("terminal.filterLabel")} value={filter} onChange={(event) => setFilter(event.target.value)}>
+            {categories.map((category) => <option key={category} value={category}>{category === "all" ? t("terminal.allCategories") : categoryLabels.get(category) ?? category}</option>)}
           </select>
-          <button type="button" aria-pressed={followPaused} onClick={() => setFollowPaused((value) => !value)}>{followPaused ? "恢复跟随" : "暂停跟随"}</button>
+          <button type="button" aria-pressed={followPaused} onClick={() => setFollowPaused((value) => !value)}>{followPaused ? t("terminal.resumeFollow") : t("terminal.pauseFollow")}</button>
         </div>
       </header>
       <div className="terminal-log-area">
-        <div className="terminal-columns" aria-hidden="true"><span>时间</span><span>级别</span><span>组件 / 类别</span><span>证据 / 影响 / 动作</span><span>结果</span></div>
+        <div className="terminal-columns" aria-hidden="true"><span>{t("terminal.column.time")}</span><span>{t("terminal.column.level")}</span><span>{t("terminal.column.component")}</span><span>{t("terminal.column.evidence")}</span><span>{t("terminal.column.result")}</span></div>
         <div className="terminal-scroll" aria-live="polite">
-          {visibleLogs.map((line, index) => (
+          {visibleLogs.map((line, index) => {
+            const message = line.messageKey ? t(line.messageKey, line.params) : line.message;
+            return (
             <div className={`log-line log-${line.type.toLowerCase()}`} key={`${line.time}-${index}`}>
               <time>{line.time}</time>
               <span className="log-type">{line.type}</span>
-              <span className="log-category">{line.category}</span>
-              <p className="log-message" title={line.message}>{renderLogMessage(line.message)}{Array.isArray(line.details) ? line.details.map((detail, detailIndex) => <span className={`log-detail token-${detail.kind}`} key={`${detail.kind}-${detailIndex}`}>{detail.value}</span>) : null}</p>
+              <span className="log-category">{line.categoryKey ? t(line.categoryKey) : line.category}</span>
+              <p className="log-message" title={message}>{renderLogMessage(message)}{Array.isArray(line.details) ? line.details.map((detail, detailIndex) => <span className={`log-detail token-${detail.kind}`} key={`${detail.kind}-${detailIndex}`}>{detail.value}</span>) : null}</p>
               <span className={`log-result ${line.result ? "has-result" : "is-empty"}`}>{line.result || "—"}</span>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
-      <footer><span>故障类别</span><span>证据</span><span>GitHub 映射</span><span>风险</span><span>修复阶段</span><b>完整日志仍在文件</b></footer>
+      <footer><span>{t("terminal.footer.category")}</span><span>{t("terminal.footer.evidence")}</span><span>{t("terminal.footer.github")}</span><span>{t("terminal.footer.risk")}</span><span>{t("terminal.footer.stage")}</span><b>{t("terminal.footer.fullLog")}</b></footer>
     </section>
   );
 }
@@ -183,14 +191,22 @@ function normalizeRuntimeEvent(event = {}) {
   };
 }
 
+// 24-hour HH:MM:SS, identical in every interface language.
+const clockTime = (date) => [date.getHours(), date.getMinutes(), date.getSeconds()].map((value) => String(value).padStart(2, "0")).join(":");
+
+// Engine and Worker output stays verbatim (untranslated). Messages produced by
+// this interface are uiMessage descriptors, rendered in the current language.
 function runtimeLog(entry) {
   const type = String(entry?.level ?? entry?.type ?? "info").toUpperCase();
   const date = new Date(entry?.timestamp ?? entry?.time ?? Date.now());
+  const text = entry?.message ?? entry?.text ?? entry?.detail ?? "";
+  const localized = text && typeof text === "object" && typeof text.key === "string" ? text : null;
   return {
-    time: Number.isNaN(date.getTime()) ? "--:--:--" : date.toLocaleTimeString("zh-CN", { hour12: false }),
+    time: Number.isNaN(date.getTime()) ? "--:--:--" : clockTime(date),
     type,
     category: String(entry?.category ?? entry?.component ?? entry?.scope ?? "runtime"),
-    message: String(entry?.message ?? entry?.text ?? entry?.detail ?? ""),
+    message: localized ? "" : String(text),
+    ...(localized ? { messageKey: localized.key, params: localized.params } : {}),
     result: String(entry?.result ?? entry?.outcome ?? ""),
     details: [
       ["path", entry?.path],
@@ -201,34 +217,39 @@ function runtimeLog(entry) {
   };
 }
 
+// Plugin card state and risk are catalog keys; evidence is either a uiMessage
+// or verbatim engine text. Nothing translated is stored, so switching the
+// interface language re-renders every card in the new language.
+const pluginEvidence = (key, id) => uiMessage(key, { plugin: id === "computer-use" ? "Computer Use" : id[0].toUpperCase() + id.slice(1) });
+
 const runtimePluginDefaults = Object.freeze({
-  browser: { state: "等待诊断", risk: "待检测", tone: "neutral", evidence: "尚未收到本轮 Browser 证据", layers: {
-    static: { state: "未验证", evidence: "等待文件、manifest 与 hash 证据" },
-    connection: { state: "未验证", evidence: "等待连接与 Native Host 证据" },
-    interaction: { state: "未经验证", evidence: "本轮未执行真实交互" },
+  browser: { state: "plugin.state.awaitingDiagnosis", risk: "plugin.risk.pending", tone: "neutral", evidence: pluginEvidence("plugin.evidence.awaitingRound", "browser"), layers: {
+    static: { state: "plugin.layer.unverified", evidence: uiMessage("plugin.evidence.awaitingStatic") },
+    connection: { state: "plugin.layer.unverified", evidence: uiMessage("plugin.evidence.awaitingConnection") },
+    interaction: { state: "plugin.layer.interactionUnverified", evidence: uiMessage("plugin.evidence.noInteraction") },
   } },
-  chrome: { state: "等待诊断", risk: "待检测", tone: "neutral", evidence: "尚未收到本轮 Chrome 证据", layers: {
-    static: { state: "未验证", evidence: "等待文件、manifest 与 hash 证据" },
-    connection: { state: "未验证", evidence: "等待连接与 Native Host 证据" },
-    interaction: { state: "未经验证", evidence: "本轮未执行真实交互" },
+  chrome: { state: "plugin.state.awaitingDiagnosis", risk: "plugin.risk.pending", tone: "neutral", evidence: pluginEvidence("plugin.evidence.awaitingRound", "chrome"), layers: {
+    static: { state: "plugin.layer.unverified", evidence: uiMessage("plugin.evidence.awaitingStatic") },
+    connection: { state: "plugin.layer.unverified", evidence: uiMessage("plugin.evidence.awaitingConnection") },
+    interaction: { state: "plugin.layer.interactionUnverified", evidence: uiMessage("plugin.evidence.noInteraction") },
   } },
-  "computer-use": { state: "等待诊断", risk: "待检测", tone: "neutral", evidence: "尚未收到本轮 Computer Use 证据", layers: {
-    static: { state: "未验证", evidence: "等待文件、manifest 与 hash 证据" },
-    connection: { state: "未验证", evidence: "等待 helper transport 证据" },
-    interaction: { state: "未经验证", evidence: "client import 不等于真实交互" },
+  "computer-use": { state: "plugin.state.awaitingDiagnosis", risk: "plugin.risk.pending", tone: "neutral", evidence: pluginEvidence("plugin.evidence.awaitingRound", "computer-use"), layers: {
+    static: { state: "plugin.layer.unverified", evidence: uiMessage("plugin.evidence.awaitingStatic") },
+    connection: { state: "plugin.layer.unverified", evidence: uiMessage("plugin.evidence.awaitingHelper") },
+    interaction: { state: "plugin.layer.interactionUnverified", evidence: uiMessage("plugin.evidence.clientImportNotInteraction") },
   } },
 });
 
-function freshRuntimePluginStates(state = "等待诊断", evidencePrefix = "尚未收到本轮") {
+export function freshRuntimePluginStates(state = "plugin.state.awaitingDiagnosis", evidenceKey = "plugin.evidence.awaitingRound") {
   return Object.fromEntries(Object.entries(runtimePluginDefaults).map(([id, value]) => [id, {
     ...value,
     layers: Object.fromEntries(Object.entries(value.layers).map(([layer, layerValue]) => [layer, { ...layerValue }])),
     state,
-    evidence: `${evidencePrefix} ${id === "computer-use" ? "Computer Use" : id[0].toUpperCase() + id.slice(1)} 证据`,
+    evidence: pluginEvidence(evidenceKey, id),
   }]));
 }
 
-function updatePluginStatesFromLogs(current, entries, phase) {
+export function updatePluginStatesFromLogs(current, entries, phase) {
   const next = { ...current };
   for (const entry of entries) {
     const message = String(entry?.message ?? entry?.text ?? entry?.detail ?? "");
@@ -242,7 +263,7 @@ function updatePluginStatesFromLogs(current, entries, phase) {
     const failed = /\b(?:error|failed|missing|unavailable|invalid|stale|drift|mismatch|denied)\b/i.test(searchable);
     const warned = !failed && /\b(?:warn|warning|repair|restore|rebuild|refresh)\b/i.test(searchable);
     const passed = !failed && !warned && /\b(?:ok|pass|passed|healthy|ready|official|current|validated|verified)\b/i.test(searchable);
-    const evidence = message.replace(/^\[[^\]]+\]\s*/g, "").slice(0, 110) || `${category} 状态更新`;
+    const evidence = message.replace(/^\[[^\]]+\]\s*/g, "").slice(0, 110) || uiMessage("plugin.evidence.statusUpdate", { category });
     const layer = /native host|transport|connection|connected|registered|bridge|helper/i.test(searchable)
       ? "connection"
       : /manifest|marketplace|plugin|cache|hash|latest|runtime|file|version/i.test(searchable)
@@ -252,23 +273,23 @@ function updatePluginStatesFromLogs(current, entries, phase) {
       const currentState = next[id] ?? runtimePluginDefaults[id];
       const layerState = layer ? {
         ...(currentState.layers?.[layer] ?? {}),
-        state: failed ? "发现问题" : warned ? "需要关注" : passed ? "已验证" : "检测中",
+        state: failed ? "plugin.state.issueFound" : warned ? "plugin.state.needsAttention" : passed ? "plugin.layer.verified" : "plugin.layer.checking",
         evidence,
       } : null;
       const layers = layer ? { ...currentState.layers, [layer]: layerState } : currentState.layers;
       next[id] = failed
-        ? { ...currentState, state: phase === "repair" ? "正在修复" : "发现问题", risk: "需处理", tone: "error", evidence, layers }
+        ? { ...currentState, state: phase === "repair" ? "plugin.state.repairInProgress" : "plugin.state.issueFound", risk: "plugin.risk.actionRequired", tone: "error", evidence, layers }
         : warned
-          ? { ...currentState, state: phase === "repair" ? "正在修复" : "需要关注", risk: "中", tone: "warn", evidence, layers }
+          ? { ...currentState, state: phase === "repair" ? "plugin.state.repairInProgress" : "plugin.state.needsAttention", risk: "plugin.risk.medium", tone: "warn", evidence, layers }
           : passed
-            ? { ...currentState, state: phase === "repair" ? "修复中" : "静态正常", risk: "低", tone: "ok", evidence, layers }
-            : { ...currentState, state: phase === "repair" ? "修复中" : "诊断中", evidence, layers };
+            ? { ...currentState, state: phase === "repair" ? "plugin.state.repairing" : "plugin.state.staticOk", risk: "plugin.risk.low", tone: "ok", evidence, layers }
+            : { ...currentState, state: phase === "repair" ? "plugin.state.repairing" : "plugin.state.diagnosing", evidence, layers };
     }
   }
   return next;
 }
 
-function finalizePluginStatesFromReport(current, report) {
+export function finalizePluginStatesFromReport(current, report) {
   const issues = Array.isArray(report?.issues) ? report.issues : [];
   const broadIssue = issues.find((issue) => /marketplace|plugin-cache|runtime-node-repl/i.test(String(issue?.category ?? "")));
   return Object.fromEntries(Object.entries(current).map(([id, value]) => {
@@ -280,137 +301,144 @@ function finalizePluginStatesFromReport(current, report) {
         ...value.layers,
         static: {
           ...(value.layers?.static ?? {}),
-          state: issue.suggestionMode === "suggest-repair" ? "发现问题" : "需要关注",
-          evidence: String(issue.evidence?.[0] ?? issue.impact ?? "诊断报告包含相关问题").slice(0, 110),
+          state: issue.suggestionMode === "suggest-repair" ? "plugin.state.issueFound" : "plugin.state.needsAttention",
+          evidence: reportEvidence(issue),
         },
       };
       return [id, {
-        state: issue.suggestionMode === "suggest-repair" ? "建议修复" : "需要关注",
-        risk: risk === "high" || risk === "critical" ? "高" : risk === "medium" ? "中" : "待核验",
+        state: issue.suggestionMode === "suggest-repair" ? "plugin.state.repairSuggested" : "plugin.state.needsAttention",
+        risk: risk === "high" || risk === "critical" ? "plugin.risk.high" : risk === "medium" ? "plugin.risk.medium" : "plugin.risk.toVerify",
         tone: risk === "high" || risk === "critical" ? "error" : "warn",
-        evidence: String(issue.evidence?.[0] ?? issue.impact ?? "诊断报告包含相关问题").slice(0, 110),
+        evidence: reportEvidence(issue),
         layers,
       }];
     }
     if (value.tone !== "neutral") return [id, value];
     return [id, {
-      state: "静态诊断完成",
-      risk: "低",
+      state: "plugin.state.staticDiagnosisComplete",
+      risk: "plugin.risk.low",
       tone: "ok",
-      evidence: "本轮静态诊断未报告该插件异常",
+      evidence: uiMessage("plugin.evidence.noIssueReported"),
       layers: {
         ...value.layers,
-        static: { ...(value.layers?.static ?? {}), state: "已验证", evidence: "本轮静态诊断未报告该插件异常" },
+        static: { ...(value.layers?.static ?? {}), state: "plugin.layer.verified", evidence: uiMessage("plugin.evidence.noIssueReported") },
       },
     }];
   }));
 }
 
-const repairEligibilityLabels = {
-  "start-repair-unavailable": "运行时未提供 startRepair",
-  "engine-events-unavailable": "运行时未提供 onEngineEvent",
-  "real-repair-disabled": "真实修复能力未启用",
-  "no-current-worker-report": "本次 Worker 生命周期内没有当前报告",
-  "invalid-report-contract": "当前报告不符合冻结契约",
-  "report-id-mismatch": "报告 ID 已失效或不匹配",
-  "report-expired": "当前报告已过期",
-  "report-only": "报告仅供展示，没有建议修复项",
-  "runtime-unavailable": "运行时桥接不可用",
-};
+function reportEvidence(issue) {
+  const text = String(issue.evidence?.[0] ?? issue.impact ?? "").slice(0, 110);
+  return text || uiMessage("plugin.evidence.reportHasIssue");
+}
 
-function localizeRepairError(message) {
+const REPAIR_ELIGIBILITY_REASONS = new Set(["start-repair-unavailable", "engine-events-unavailable", "real-repair-disabled", "no-current-worker-report", "invalid-report-contract", "report-id-mismatch", "report-expired", "report-only", "runtime-unavailable"]);
+
+// Unknown reasons come from the runtime contract and are shown verbatim.
+export function repairEligibilityMessage(reason) {
+  return REPAIR_ELIGIBILITY_REASONS.has(reason) ? uiMessage(`repair.eligibility.${reason}`) : String(reason ?? "");
+}
+
+export function localizeRepairError(message) {
   const raw = String(message || "");
   if (/Worker request timed out:\s*repair\.start/i.test(raw)) {
-    return "修复仍可能在后台运行，但界面等待时间已超过限制。请勿重复修复，并查看实时终端确认进度。";
+    return uiMessage("repair.error.timeout");
   }
   if (/Runtime worker (?:is unavailable|exited)/i.test(raw)) {
-    return "修复后台进程已断开。请查看实时终端中的英文错误详情。";
+    return uiMessage("repair.error.workerDisconnected");
   }
   if (/Runtime shutdown is in progress/i.test(raw)) {
-    return "启动器正在关闭，当前无法继续修复。";
+    return uiMessage("repair.error.shuttingDown");
   }
-  return "修复未能完成。请查看实时终端中的英文错误详情。";
+  return uiMessage("repair.error.generic");
 }
 
 function DiagnosisBrief({ flowState, report, runtimeMode }) {
+  const t = useI18n();
   const summary = issueSummary(report);
   const waitingForDiagnosis = runtimeMode && !report && !flowState;
   const reportTitle = summary.first
-    ? `${summary.first.category} · 已生成结构化证据`
-    : waitingForDiagnosis ? "准备开始只读诊断" : runtimeMode ? "等待本机只读诊断" : "WB-CHR-011 · Chrome 桥接偏差";
+    ? t("brief.titleWithEvidence", { category: summary.first.category })
+    : waitingForDiagnosis ? t("brief.titleReady") : runtimeMode ? t("brief.titleWaitingLocal") : t("brief.titleConcept");
   return (
-    <section className="diagnosis-brief" aria-label="诊断决策信息">
-      <header><div><span className="brief-kicker">当前报告</span><strong>{reportTitle}</strong></div><b>{flowState || (waitingForDiagnosis ? "等待开始" : "")}</b></header>
+    <section className="diagnosis-brief" aria-label={t("brief.ariaLabel")}>
+      <header><div><span className="brief-kicker">{t("brief.kicker")}</span><strong>{reportTitle}</strong></div><b>{flowState || (waitingForDiagnosis ? t("brief.waitingToStart") : "")}</b></header>
       <div className="brief-facts">
-        <article><span>发现</span><strong>{report ? `${summary.issues.length} 项` : runtimeMode ? (waitingForDiagnosis ? "尚未开始" : "尚未诊断") : "1 项偏差"}</strong><p>{summary.first?.evidence?.[0] || (runtimeMode ? (waitingForDiagnosis ? "请点击下方“只读诊断”开始收集本机证据" : "点击只读诊断获取本机证据") : "本机桥接版本与目标清单不一致")}</p></article>
-        <article><span>影响</span><strong>{summary.first?.risk ? `${summary.first.risk} 风险` : "等待判定"}</strong><p>{summary.first?.impact || "Browser、Chrome、Computer Use 分别判定"}</p></article>
-        <article><span>拟动作</span><strong>{summary.repairable.length ? `${summary.repairable.length} 项可建议修复` : "无自动写入"}</strong><p>{summary.first?.plannedActions?.join(" → ") || (waitingForDiagnosis ? "不会执行任何写入" : "先报告，再由用户决定")}</p></article>
+        <article><span>{t("brief.found")}</span><strong>{report ? t("brief.itemCount", { count: summary.issues.length }) : runtimeMode ? (waitingForDiagnosis ? t("brief.notStarted") : t("brief.notDiagnosed")) : t("brief.conceptDrift")}</strong><p>{summary.first?.evidence?.[0] || (runtimeMode ? (waitingForDiagnosis ? t("brief.hintStart") : t("brief.hintRun")) : t("brief.conceptEvidence"))}</p></article>
+        <article><span>{t("brief.impact")}</span><strong>{summary.first?.risk ? t("brief.riskLevel", { risk: summary.first.risk }) : t("brief.awaitingAssessment")}</strong><p>{summary.first?.impact || t("brief.impactDefault")}</p></article>
+        <article><span>{t("brief.plannedActions")}</span><strong>{summary.repairable.length ? t("brief.repairSuggestedCount", { count: summary.repairable.length }) : t("brief.noAutomaticWrites")}</strong><p>{summary.first?.plannedActions?.join(" → ") || (waitingForDiagnosis ? t("brief.noWrites") : t("brief.reportFirst"))}</p></article>
       </div>
     </section>
   );
 }
 
 function DecisionSummary({ flowState, actualProgress, indeterminate, report, runtimeMode }) {
+  const t = useI18n();
   const summary = issueSummary(report);
   const waitingForDiagnosis = runtimeMode && !report && !flowState;
   return (
-    <aside className="decision-summary" aria-label="诊断决策摘要">
-      <header><span>诊断决策摘要</span><b>{waitingForDiagnosis ? "等待开始" : flowState === "AwaitingDecision" ? "等待用户" : runtimeMode ? "本机状态" : "只读演示"}</b></header>
+    <aside className="decision-summary" aria-label={t("decision.ariaLabel")}>
+      <header><span>{t("decision.title")}</span><b>{waitingForDiagnosis ? t("decision.badge.waitingToStart") : flowState === "AwaitingDecision" ? t("decision.badge.awaitingUser") : runtimeMode ? t("decision.badge.local") : t("decision.badge.readOnlyDemo")}</b></header>
       <dl>
-        <div><dt>问题</dt><dd>{report ? `${summary.issues.length} 项` : waitingForDiagnosis ? "尚未开始" : "待诊断"}</dd></div>
-        <div><dt>最高风险</dt><dd className="semantic-warn">{waitingForDiagnosis ? "待诊断" : summary.highestRisk}</dd></div>
-        <div><dt>拟写入范围</dt><dd>{summary.writeScopeCount} 处</dd></div>
-        <div><dt>可信进度</dt><dd>{actualProgress}%</dd></div>
+        <div><dt>{t("decision.issues")}</dt><dd>{report ? t("brief.itemCount", { count: summary.issues.length }) : waitingForDiagnosis ? t("brief.notStarted") : t("decision.pendingDiagnosis")}</dd></div>
+        <div><dt>{t("decision.highestRisk")}</dt><dd className="semantic-warn">{waitingForDiagnosis ? t("decision.pendingDiagnosis") : summary.highestRisk}</dd></div>
+        <div><dt>{t("decision.writeScope")}</dt><dd>{t("decision.writeScopeCount", { count: summary.writeScopeCount })}</dd></div>
+        <div><dt>{t("decision.trustedProgress")}</dt><dd>{actualProgress}%</dd></div>
       </dl>
-      <p>{waitingForDiagnosis ? "请先运行只读诊断；此阶段不会写入插件。" : indeterminate ? "长步骤暂无精确百分比，保持最后可信值。" : summary.repairable.length ? "存在允许建议修复的类别；仍需用户在报告中明确确认。" : "没有允许自动修复的类别，可直接打开 GPT 或查看日志。"}</p>
+      <p>{waitingForDiagnosis ? t("decision.note.waiting") : indeterminate ? t("decision.note.indeterminate") : summary.repairable.length ? t("decision.note.repairable") : t("decision.note.none")}</p>
     </aside>
   );
 }
 
-function RepairReport({ onClose, report, runtimeMode, canRepair, canOpenGPT, onConfirmRepair, onOpenGPT }) {
+export function RepairReport({ onClose, report, runtimeMode, canRepair, canOpenGPT, onConfirmRepair, onOpenGPT }) {
+  const t = useI18n();
   const summary = issueSummary(report);
+  const listSeparator = t.locale === "zh-CN" ? "；" : "; ";
   const issueFields = summary.issues.flatMap((issue, index) => {
     const knownIssue = typeof issue?.knownIssue === "string"
       ? issue.knownIssue
-      : issue?.knownIssue ? JSON.stringify(issue.knownIssue) : "无";
-    const confidence = Number.isFinite(issue?.confidence) ? `${Math.round(issue.confidence * 100)}%` : "未提供";
-    const prefix = `问题 ${index + 1}`;
+      : issue?.knownIssue ? JSON.stringify(issue.knownIssue) : t("common.none");
+    const confidence = Number.isFinite(issue?.confidence) ? `${Math.round(issue.confidence * 100)}%` : t("common.notProvided");
+    const prefix = t("report.issueN", { index: index + 1 });
+    const field = (name) => `${prefix} · ${t(`report.field.${name}`)}`;
+    const yesNo = (value) => value === true ? t("common.yes") : t("common.no");
     return [
-      [prefix, issue?.category ?? "未分类"],
-      [`${prefix} · 证据`, issue?.evidence?.join("；") || "未提供"],
-      [`${prefix} · 影响`, issue?.impact || "未提供"],
-      [`${prefix} · 拟动作`, issue?.plannedActions?.join(" → ") || "无写入动作"],
-      [`${prefix} · 风险`, issue?.risk || "unknown"],
-      [`${prefix} · 写入范围`, issue?.writeScope?.join("；") || "无"],
-      [`${prefix} · 门槛`, `可跳过：${issue?.canSkip === true ? "是" : "否"}；需重启：${issue?.requiresRestart === true ? "是" : "否"}；置信度：${confidence}`],
-      [`${prefix} · 已知问题`, knownIssue],
-      [`${prefix} · 建议`, issue?.suggestionMode ?? "无"],
+      [prefix, issue?.category ?? t("report.uncategorized")],
+      [field("evidence"), issue?.evidence?.join(listSeparator) || t("common.notProvided")],
+      [field("impact"), issue?.impact || t("common.notProvided")],
+      [field("plannedActions"), issue?.plannedActions?.join(" → ") || t("report.noWriteActions")],
+      [field("risk"), issue?.risk || "unknown"],
+      [field("writeScope"), issue?.writeScope?.join(listSeparator) || t("common.none")],
+      [field("gates"), t("report.gatesValue", { canSkip: yesNo(issue?.canSkip), requiresRestart: yesNo(issue?.requiresRestart), confidence })],
+      [field("knownIssue"), knownIssue],
+      [field("suggestion"), issue?.suggestionMode ?? t("common.none")],
     ];
   });
   const fields = report ? [
-    ["报告", report.reportId],
+    [t("report.field.report"), report.reportId],
     ...issueFields,
-    ["有效期", report.expiresAt],
+    [t("report.field.expires"), report.expiresAt],
   ] : [
-    ["状态", runtimeMode ? "尚未生成本机诊断报告" : "概念演示报告"],
-    ["下一步", "先运行只读诊断，再决定是否修复。"],
+    [t("report.field.status"), runtimeMode ? t("report.status.noLocalReport") : t("report.status.concept")],
+    [t("report.field.next"), t("report.nextStep")],
   ];
   return (
     <div className="inner-modal-backdrop">
-      <section className="repair-report" role="dialog" aria-modal="true" aria-label="修复前报告">
-        <header><div><Icon name="shield" size={18}/><div><strong>ShowReport · 修复前说明</strong><span>当前状态：{runtimeMode && !canRepair ? "只读审计 / 不可提交" : "AwaitingDecision"}</span></div></div><button type="button" aria-label="关闭修复说明" onClick={onClose}><Icon name="close" size={16}/></button></header>
+      <section className="repair-report" role="dialog" aria-modal="true" aria-label={t("report.ariaLabel")}>
+        <header><div><Icon name="shield" size={18}/><div><strong>{t("report.title")}</strong><span>{t("report.currentState", { state: runtimeMode && !canRepair ? t("report.readOnlyAudit") : "AwaitingDecision" })}</span></div></div><button type="button" aria-label={t("report.closeAria")} onClick={onClose}><Icon name="close" size={16}/></button></header>
         <div className="repair-report-grid">{fields.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</div>
-        <div className="report-freeze"><b>{runtimeMode ? "受控修复门槛" : "A 类冻结"}</b><span>{runtimeMode ? "只有当前、未过期且属于允许类别的报告，才能进入未修改的 3.1.1 修复序列。" : "此概念站不执行插件写入、注册、备份或更新。"}</span></div>
-        <footer><button type="button" className="secondary-button" onClick={onClose}>返回等待</button><button type="button" className="secondary-button" disabled={runtimeMode && !canOpenGPT} onClick={onOpenGPT}>跳过修复 · 打开 GPT{runtimeMode && !canOpenGPT ? "（不可执行）" : ""}</button>{runtimeMode ? <button type="button" className="primary-button" disabled={!canRepair} onClick={onConfirmRepair}>{canRepair ? "确认并开始受控修复" : "当前报告不可修复"}</button> : null}</footer>
+        <div className="report-freeze"><b>{runtimeMode ? t("report.gate.runtimeTitle") : t("report.gate.conceptTitle")}</b><span>{runtimeMode ? t("report.gate.runtimeBody") : t("report.gate.conceptBody")}</span></div>
+        <footer><button type="button" className="secondary-button" onClick={onClose}>{t("report.back")}</button><button type="button" className="secondary-button" disabled={runtimeMode && !canOpenGPT} onClick={onOpenGPT}>{t("report.skipOpenGpt")}{runtimeMode && !canOpenGPT ? t("common.unavailableSuffix") : ""}</button>{runtimeMode ? <button type="button" className="primary-button" disabled={!canRepair} onClick={onConfirmRepair}>{canRepair ? t("report.confirmRepair") : t("report.repairUnavailable")}</button> : null}</footer>
       </section>
     </div>
   );
 }
 
 function PluginPanel({ pluginColors = ["#4de0a2", "#ffc05b", "#58b7ff"], visibility = {}, runtimeMode = false, runtimePluginStates = runtimePluginDefaults }) {
+  const t = useI18n();
   return (
-    <aside className="plugin-panel" aria-label="Browser、Chrome、Computer Use 独立状态">
-      <header><span>插件状态</span><small>独立证据，不聚合</small></header>
+    <aside className="plugin-panel" aria-label={t("plugin.panel.ariaLabel")}>
+      <header><span>{t("plugin.panel.title")}</span><small>{t("plugin.panel.subtitle")}</small></header>
       <div className="plugin-list">
         {pluginStates.map((plugin, index) => {
           const liveState = runtimeMode ? (runtimePluginStates[plugin.id] ?? runtimePluginDefaults[plugin.id]) : plugin;
@@ -418,17 +446,17 @@ function PluginPanel({ pluginColors = ["#4de0a2", "#ffc05b", "#58b7ff"], visibil
           return (
           <article key={plugin.id} className={`plugin-card tone-${liveState.tone} ${visibility[plugin.id] === false ? "is-summary-only" : ""}`} style={{ "--plugin-identity": pluginColors[index] ?? ["#4de0a2", "#ffc05b", "#58b7ff"][index] }}>
             <div className="plugin-icon"><OfficialPluginIcon pluginId={plugin.id} color={pluginColors[index] ?? ["#4de0a2", "#ffc05b", "#58b7ff"][index]} /></div>
-            <div className="plugin-copy"><strong>{plugin.name}</strong><span>{liveState.state}</span><small>{liveState.evidence}</small></div>
-            <div className="plugin-risk"><span>风险</span><b>{liveState.risk}</b></div>
-            <div className="plugin-layers" aria-label={`${plugin.name} 分层证据`}>
-              <span><b>静态</b>{layers.static?.state || "未验证"}</span>
-              <span><b>连接</b>{layers.connection?.state || "未验证"}</span>
-              <span><b>交互</b>{layers.interaction?.state || "未经验证"}</span>
+            <div className="plugin-copy"><strong>{plugin.name}</strong><span>{t(liveState.state)}</span><small>{runtimeMode ? formatMessage(t, liveState.evidence) : t(liveState.evidence)}</small></div>
+            <div className="plugin-risk"><span>{t("plugin.panel.risk")}</span><b>{t(liveState.risk)}</b></div>
+            <div className="plugin-layers" aria-label={t("plugin.panel.layersAria", { plugin: plugin.name })}>
+              <span><b>{t("plugin.layerName.static")}</b>{t(layers.static?.state || "plugin.layer.unverified")}</span>
+              <span><b>{t("plugin.layerName.connection")}</b>{t(layers.connection?.state || "plugin.layer.unverified")}</span>
+              <span><b>{t("plugin.layerName.interaction")}</b>{t(layers.interaction?.state || "plugin.layer.interactionUnverified")}</span>
             </div>
           </article>
         )})}
       </div>
-      <div className="plugin-evidence-note"><Icon name="shield" size={15} /><span>静态、连接、真实交互分开判定</span></div>
+      <div className="plugin-evidence-note"><Icon name="shield" size={15} /><span>{t("plugin.panel.note")}</span></div>
     </aside>
   );
 }
@@ -439,14 +467,7 @@ const SOCIAL_ACCOUNTS = Object.freeze({
   chatgpt: { displayName: "ChatGPT", handle: "@ChatGPT" },
 });
 
-const SOCIAL_SOURCE_LABELS = Object.freeze({
-  "x-profile": "X 官方主页",
-  "xxu-rss": "XXU RSS",
-  rsshub: "RSSHub",
-  jina: "Jina 只读镜像",
-  mock: "本地 mock",
-  concept: "本地 mock",
-});
+const SOCIAL_SOURCES = new Set(["x-profile", "xxu-rss", "rsshub", "jina", "mock", "concept"]);
 
 const SOCIAL_AVATAR_CACHE_KEY = "winbridge.social-avatar-cache.v1";
 const SOCIAL_LOCAL_AVATARS = Object.freeze({
@@ -456,10 +477,10 @@ const SOCIAL_LOCAL_AVATARS = Object.freeze({
 });
 
 const CONCEPT_SOCIAL_POSTS = Object.freeze([
-  { postId: "concept-tibo-1", account: "tibo", ageHours: 1, text: "正在把恢复工具的每一步决定做得更清楚、更可逆。" },
-  { postId: "concept-openai-1", account: "openai", ageHours: 6, text: "这是用于 WinBridge 概念预览的本地示例帖子，不来自网络。" },
-  { postId: "concept-chatgpt-1", account: "chatgpt", ageHours: 19, text: "本地 mock 用于展示只读时间线、翻译状态和受控原帖入口。" },
-  { postId: "concept-tibo-2", account: "tibo", ageHours: 34, text: "诊断先行，修复动作始终交给用户决定。" },
+  { postId: "concept-tibo-1", account: "tibo", ageHours: 1, textKey: "social.concept.tibo1" },
+  { postId: "concept-openai-1", account: "openai", ageHours: 6, textKey: "social.concept.openai1" },
+  { postId: "concept-chatgpt-1", account: "chatgpt", ageHours: 19, textKey: "social.concept.chatgpt1" },
+  { postId: "concept-tibo-2", account: "tibo", ageHours: 34, textKey: "social.concept.tibo2" },
 ]);
 
 const safeAvatarDataUrl = (value) => typeof value === "string"
@@ -522,12 +543,15 @@ function normalizeSocialPost(post, index, avatarCache = {}) {
     timeUnconfirmed: post?.timeUnconfirmed === true,
     source: String(post?.source || "unknown"),
     text: stripSocialMarkup(post?.text || "", 2000),
+    // Built-in concept posts are interface copy; network posts are never translated implicitly.
+    textKey: typeof post?.textKey === "string" ? post.textKey : null,
     avatarDataUrl: safeAvatarDataUrl(post?.avatarDataUrl) || safeAvatarDataUrl(avatarCache[account]) || SOCIAL_LOCAL_AVATARS[account],
     order: index,
   };
 }
 
-function SocialFeed({ onClose, runtimeMode, runtimeController, settings, appearanceClass = "", appearanceStyle }) {
+export function SocialFeed({ onClose, runtimeMode, runtimeController, settings, appearanceClass = "", appearanceStyle }) {
+  const t = useI18n();
   const [feedState, setFeedState] = useState({ status: "loading", reason: "", posts: [], cacheAgeSeconds: null, fetchedAt: null, degraded: false });
   const [translations, setTranslations] = useState({});
   const [openStatus, setOpenStatus] = useState({});
@@ -546,11 +570,11 @@ function SocialFeed({ onClose, runtimeMode, runtimeController, settings, appeara
     setTranslations({});
     setOpenStatus({});
     if (!settings.socialEnabled) {
-      setFeedState({ status: "disabled", reason: "社交动态已在设置中关闭。", posts: [], cacheAgeSeconds: null, fetchedAt: null, degraded: false });
+      setFeedState({ status: "disabled", reason: uiMessage("social.disabledInSettings"), posts: [], cacheAgeSeconds: null, fetchedAt: null, degraded: false });
       return () => { active = false; };
     }
     if (accountIds.length === 0) {
-      setFeedState({ status: "disabled", reason: "请至少启用一个账户。", posts: [], cacheAgeSeconds: null, fetchedAt: null, degraded: false });
+      setFeedState({ status: "disabled", reason: uiMessage("social.enableOneAccount"), posts: [], cacheAgeSeconds: null, fetchedAt: null, degraded: false });
       return () => { active = false; };
     }
     setFeedState({ status: "loading", reason: "", posts: [], cacheAgeSeconds: null, fetchedAt: null, degraded: false });
@@ -567,18 +591,18 @@ function SocialFeed({ onClose, runtimeMode, runtimeController, settings, appeara
          writeAvatarCache(next);
          return next;
        });
-        setFeedState({ status: "ready", reason: "本地 mock 演示", posts, cacheAgeSeconds: 0, fetchedAt: new Date().toISOString(), degraded: false });
+        setFeedState({ status: "ready", reason: uiMessage("social.mockDemo"), posts, cacheAgeSeconds: 0, fetchedAt: new Date().toISOString(), degraded: false });
       return () => { active = false; };
     }
     if (!runtimeController?.capabilities.getSocialFeed) {
-      setFeedState({ status: "unavailable", reason: "此页面暂时不可访问", posts: [], cacheAgeSeconds: null, fetchedAt: null, degraded: false });
+      setFeedState({ status: "unavailable", reason: uiMessage("social.unavailable"), posts: [], cacheAgeSeconds: null, fetchedAt: null, degraded: false });
       return () => { active = false; };
     }
     runtimeController.getSocialFeed({ accounts: accountIds, maxPosts, hours, locale, useJinaFallback: settings.socialUseJinaFallback === true })
       .then((payload) => {
         if (!active) return;
         if (payload?.available !== true) {
-          setFeedState({ status: "unavailable", reason: "此页面暂时不可访问", posts: [], cacheAgeSeconds: Number.isFinite(payload?.cacheAgeSeconds) ? payload.cacheAgeSeconds : null, fetchedAt: payload?.fetchedAt || null, degraded: payload?.degraded === true });
+          setFeedState({ status: "unavailable", reason: uiMessage("social.unavailable"), posts: [], cacheAgeSeconds: Number.isFinite(payload?.cacheAgeSeconds) ? payload.cacheAgeSeconds : null, fetchedAt: payload?.fetchedAt || null, degraded: payload?.degraded === true });
           return;
         }
         const posts = (Array.isArray(payload.posts) ? payload.posts : []).slice(0, maxPosts).map((post, index) => normalizeSocialPost(post, index, avatarCache)).filter(Boolean);
@@ -590,18 +614,18 @@ function SocialFeed({ onClose, runtimeMode, runtimeController, settings, appeara
         });
         setFeedState({ status: "ready", reason: String(payload?.reason || ""), posts, cacheAgeSeconds: Number.isFinite(payload?.cacheAgeSeconds) ? payload.cacheAgeSeconds : null, fetchedAt: payload?.fetchedAt || null, degraded: payload?.degraded === true });
       })
-      .catch(() => { if (active) setFeedState({ status: "unavailable", reason: "此页面暂时不可访问", posts: [], cacheAgeSeconds: null, fetchedAt: null, degraded: false }); });
+      .catch(() => { if (active) setFeedState({ status: "unavailable", reason: uiMessage("social.unavailable"), posts: [], cacheAgeSeconds: null, fetchedAt: null, degraded: false }); });
     return () => { active = false; };
   }, [runtimeMode, runtimeController, settings.socialEnabled, settings.socialUseJinaFallback, locale, hours, maxPosts, accountIds.join("|"), refreshNonce]);
 
   const translatePost = async (post) => {
     setTranslations((current) => ({ ...current, [post.postId]: { status: "loading", text: "" } }));
     if (!runtimeMode) {
-      setTranslations((current) => ({ ...current, [post.postId]: { status: "ready", text: stripSocialMarkup(`[${locale}] 本地 mock 翻译：${post.text}`) } }));
+      setTranslations((current) => ({ ...current, [post.postId]: { status: "ready", text: uiMessage("social.mockTranslation", { locale, text: post.textKey ? uiMessage(post.textKey) : post.text }) } }));
       return;
     }
     if (!runtimeController?.capabilities.translateSocialPost) {
-      setTranslations((current) => ({ ...current, [post.postId]: { status: "error", text: "翻译服务暂时不可用" } }));
+      setTranslations((current) => ({ ...current, [post.postId]: { status: "error", text: uiMessage("social.translationUnavailable") } }));
       return;
     }
     try {
@@ -610,62 +634,62 @@ function SocialFeed({ onClose, runtimeMode, runtimeController, settings, appeara
        const translatedText = (result?.status === "translated" || result?.available === true) && result?.text
          ? stripSocialMarkup(result.text)
          : "";
-       setTranslations((current) => ({ ...current, [post.postId]: translatedText ? { status: "ready", text: translatedText } : { status: "error", text: "翻译服务暂时不可用" } }));
+       setTranslations((current) => ({ ...current, [post.postId]: translatedText ? { status: "ready", text: translatedText } : { status: "error", text: uiMessage("social.translationUnavailable") } }));
     } catch {
       if (!aliveRef.current) return;
-      setTranslations((current) => ({ ...current, [post.postId]: { status: "error", text: "翻译服务暂时不可用" } }));
+      setTranslations((current) => ({ ...current, [post.postId]: { status: "error", text: uiMessage("social.translationUnavailable") } }));
     }
   };
 
   const openPost = async (post) => {
     if (!runtimeMode) {
-      setOpenStatus((current) => ({ ...current, [post.postId]: "概念态不打开外部页面" }));
+      setOpenStatus((current) => ({ ...current, [post.postId]: uiMessage("social.open.concept") }));
       return;
     }
     if (!runtimeController?.capabilities.openSocialPost) {
-      setOpenStatus((current) => ({ ...current, [post.postId]: "原帖暂时不可打开" }));
+      setOpenStatus((current) => ({ ...current, [post.postId]: uiMessage("social.open.unavailable") }));
       return;
     }
     try {
       await runtimeController.openSocialPost({ postId: post.postId });
       if (!aliveRef.current) return;
-      setOpenStatus((current) => ({ ...current, [post.postId]: "已交由系统打开" }));
+      setOpenStatus((current) => ({ ...current, [post.postId]: uiMessage("social.open.handedOff") }));
     } catch {
       if (!aliveRef.current) return;
-      setOpenStatus((current) => ({ ...current, [post.postId]: "原帖暂时不可打开" }));
+      setOpenStatus((current) => ({ ...current, [post.postId]: uiMessage("social.open.unavailable") }));
     }
   };
 
   const formatSocialTime = (post) => {
-    if (post.timeUnconfirmed) return "时间未确认";
+    if (post.timeUnconfirmed) return t("social.time.unconfirmed");
     const value = post.publishedAt || post.createdAt;
     const parsed = Date.parse(value || "");
     return Number.isFinite(parsed)
-      ? new Date(parsed).toLocaleString("zh-CN", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
-      : "发布时间未提供";
+      ? new Date(parsed).toLocaleString(t.locale, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })
+      : t("social.time.notProvided");
   };
 
   const formatFetchedAt = (value) => {
     const parsed = Date.parse(value || "");
-    return Number.isFinite(parsed) ? new Date(parsed).toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : "未记录";
+    return Number.isFinite(parsed) ? new Date(parsed).toLocaleTimeString(t.locale, { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : t("social.time.notRecorded");
   };
 
   const sourceCount = new Set(feedState.posts.map((post) => post.source)).size;
 
   return createPortal(
     <div className={`inner-modal-backdrop ${appearanceClass}`} style={appearanceStyle}>
-      <section className="social-feed-dialog" role="dialog" aria-modal="true" aria-label="看看他社交动态">
-        <header><div><MenuGlyph name="observe" size={18}/><div><strong>看看他</strong><span>{runtimeMode ? "只读社交动态 · 官方来源优先" : "本地 mock 演示 · 非网络内容"}</span></div></div><div className="social-feed-actions"><button type="button" className="social-feed-refresh" aria-label="刷新看看他" disabled={feedState.status === "loading"} onClick={() => setRefreshNonce((value) => value + 1)}>刷新</button><button type="button" aria-label="关闭看看他" onClick={onClose}><Icon name="close" size={16}/></button></div></header>
-        <div className="social-feed-meta"><span>最近 {hours} 小时</span><span>最多 {maxPosts} 条</span><span>目标语言 {locale}</span>{sourceCount > 0 ? <span>来源 {sourceCount} 个</span> : null}{feedState.fetchedAt ? <span>更新于 {formatFetchedAt(feedState.fetchedAt)}</span> : null}{Number.isFinite(feedState.cacheAgeSeconds) ? <span>缓存 {Math.max(0, Math.round(feedState.cacheAgeSeconds))} 秒</span> : null}{feedState.degraded ? <span>降级只读来源</span> : null}<b>不影响诊断或修复</b></div>
+      <section className="social-feed-dialog" role="dialog" aria-modal="true" aria-label={t("social.ariaLabel")}>
+        <header><div><MenuGlyph name="observe" size={18}/><div><strong>{t("social.title")}</strong><span>{runtimeMode ? t("social.subtitleRuntime") : t("social.subtitleConcept")}</span></div></div><div className="social-feed-actions"><button type="button" className="social-feed-refresh" aria-label={t("social.refreshAria")} disabled={feedState.status === "loading"} onClick={() => setRefreshNonce((value) => value + 1)}>{t("social.refresh")}</button><button type="button" aria-label={t("social.closeAria")} onClick={onClose}><Icon name="close" size={16}/></button></div></header>
+        <div className="social-feed-meta"><span>{t("social.meta.hours", { hours })}</span><span>{t("social.meta.maxPosts", { count: maxPosts })}</span><span>{t("social.meta.locale", { locale })}</span>{sourceCount > 0 ? <span>{t("social.meta.sources", { count: sourceCount })}</span> : null}{feedState.fetchedAt ? <span>{t("social.meta.updated", { time: formatFetchedAt(feedState.fetchedAt) })}</span> : null}{Number.isFinite(feedState.cacheAgeSeconds) ? <span>{t("social.meta.cache", { seconds: Math.max(0, Math.round(feedState.cacheAgeSeconds)) })}</span> : null}{feedState.degraded ? <span>{t("social.meta.degraded")}</span> : null}<b>{t("social.meta.independent")}</b></div>
         <div className="social-feed-scroll">
-          {feedState.status === "loading" ? <div className="social-feed-empty"><strong>正在获取只读动态…</strong><span>主窗口与设置不受阻塞</span></div> : null}
-          {["disabled", "unavailable"].includes(feedState.status) ? <div className="social-feed-empty"><strong>{feedState.reason}</strong><span>{feedState.status === "disabled" ? "可在更多设置 → 社交动态中调整" : "入口仍可关闭，诊断与修复不受影响"}</span></div> : null}
-          {feedState.status === "ready" && feedState.posts.length === 0 ? <div className="social-feed-empty"><strong>时间范围内没有可展示的动态</strong><span>不会自动扩大时间范围</span></div> : null}
+          {feedState.status === "loading" ? <div className="social-feed-empty"><strong>{t("social.loading")}</strong><span>{t("social.loadingHint")}</span></div> : null}
+          {["disabled", "unavailable"].includes(feedState.status) ? <div className="social-feed-empty"><strong>{formatMessage(t, feedState.reason)}</strong><span>{feedState.status === "disabled" ? t("social.disabledHint") : t("social.unavailableHint")}</span></div> : null}
+          {feedState.status === "ready" && feedState.posts.length === 0 ? <div className="social-feed-empty"><strong>{t("social.empty")}</strong><span>{t("social.emptyHint")}</span></div> : null}
           {feedState.posts.map((post) => {
             const translation = translations[post.postId];
             return <article className="social-post" key={post.postId} dir={locale === "ar" ? "rtl" : "ltr"}>
               <div className="social-avatar">{post.avatarDataUrl ? <img src={post.avatarDataUrl} alt="" /> : <span>{post.displayName.slice(0, 1).toUpperCase()}</span>}</div>
-              <div className="social-post-body"><header><strong>{post.displayName}</strong><span>{post.handle}</span><small className="social-post-source">来源：{SOCIAL_SOURCE_LABELS[post.source] || "受限来源"}</small><time>{formatSocialTime(post)}</time></header><p>{post.text}</p>{translation ? <div className={`social-translation is-${translation.status}`}>{translation.status === "loading" ? "正在翻译…" : translation.text}</div> : null}<footer><button type="button" disabled={translation?.status === "loading"} onClick={() => translatePost(post)}>翻译为 {locale}</button><button type="button" onClick={() => openPost(post)}>查看原帖 ↗</button>{openStatus[post.postId] ? <span>{openStatus[post.postId]}</span> : null}</footer></div>
+              <div className="social-post-body"><header><strong>{post.displayName}</strong><span>{post.handle}</span><small className="social-post-source">{t("social.sourceLabel", { source: t(`social.source.${SOCIAL_SOURCES.has(post.source) ? post.source : "restricted"}`) })}</small><time>{formatSocialTime(post)}</time></header><p>{post.textKey ? t(post.textKey) : post.text}</p>{translation ? <div className={`social-translation is-${translation.status}`}>{translation.status === "loading" ? t("social.translating") : formatMessage(t, translation.text)}</div> : null}<footer><button type="button" disabled={translation?.status === "loading"} onClick={() => translatePost(post)}>{t("social.translateTo", { locale })}</button><button type="button" onClick={() => openPost(post)}>{t("social.viewOriginal")}</button>{openStatus[post.postId] ? <span>{formatMessage(t, openStatus[post.postId])}</span> : null}</footer></div>
             </article>;
           })}
         </div>
@@ -675,52 +699,55 @@ function SocialFeed({ onClose, runtimeMode, runtimeController, settings, appeara
   );
 }
 
-function SupportBundleDialog({ onClose, onConfirm, busy }) {
+export function SupportBundleDialog({ onClose, onConfirm, busy }) {
+  const t = useI18n();
   return createPortal(
     <div className="inner-modal-backdrop">
-      <section className="support-bundle-dialog" role="dialog" aria-modal="true" aria-label="导出诊断支持包">
-        <header><div><Icon name="shield" size={18}/><div><strong>导出诊断支持包</strong><span>只读生成 · 本地脱敏 · 不会上传</span></div></div><button type="button" aria-label="关闭支持包说明" onClick={onClose}><Icon name="close" size={16}/></button></header>
-        <div className="support-bundle-copy"><p>生成前请确认下面的内容清单。支持包只保存在本机，用于提交 Issue 时提供可复现证据。</p><ul><li>应用、Electron、Windows 架构与当前运行状态</li><li>结构化诊断报告、插件状态和冻结快照校验摘要</li><li>最近一段有界运行日志（自动脱敏并限制大小）</li><li>不包含账号、令牌、Cookie、认证文件、个人路径或官方插件 payload</li></ul></div>
-        <footer><button type="button" className="secondary-button" onClick={onClose}>取消</button><button type="button" className="primary-button" disabled={busy} onClick={onConfirm}>{busy ? "正在生成…" : "确认并生成"}</button></footer>
+      <section className="support-bundle-dialog" role="dialog" aria-modal="true" aria-label={t("support.title")}>
+        <header><div><Icon name="shield" size={18}/><div><strong>{t("support.title")}</strong><span>{t("support.subtitle")}</span></div></div><button type="button" aria-label={t("support.closeAria")} onClick={onClose}><Icon name="close" size={16}/></button></header>
+        <div className="support-bundle-copy"><p>{t("support.intro")}</p><ul><li>{t("support.item.app")}</li><li>{t("support.item.report")}</li><li>{t("support.item.logs")}</li><li>{t("support.item.excluded")}</li></ul></div>
+        <footer><button type="button" className="secondary-button" onClick={onClose}>{t("support.cancel")}</button><button type="button" className="primary-button" disabled={busy} onClick={onConfirm}>{busy ? t("support.generating") : t("support.confirm")}</button></footer>
       </section>
     </div>,
     document.body
   );
 }
 
-function ResultPage({ onBack, onOpenLogs, onOpenGPT, onRequestSupportBundle, runtimeMode, canOpenLogs, canOpenGPT, canExportSupportBundle, report, repairResult }) {
+export function ResultPage({ onBack, onOpenLogs, onOpenGPT, onRequestSupportBundle, runtimeMode, canOpenLogs, canOpenGPT, canExportSupportBundle, report, repairResult }) {
+  const t = useI18n();
   const summary = issueSummary(report);
   const firstIssue = summary.first;
   const runtimeCards = [
-    ["诊断前", report ? `${summary.issues.length} 项报告` : "报告未提供", firstIssue?.category ?? "无可展示类别"],
-    ["执行动作", firstIssue?.plannedActions?.length ? `${firstIssue.plannedActions.length} 个受控动作` : "以运行时日志为准", firstIssue?.plannedActions?.join(" → ") || "未从报告声明动作"],
-    ["诊断后", repairResult?.finalVerificationPassed === true ? "最终核验通过" : "未确认", repairResult?.operationId ? `操作 ${repairResult.operationId}` : "等待受控结果"],
-    ["未解决项", "未由契约单独返回", "请从完整日志与后续只读诊断核对"],
+    [t("result.card.before"), report ? t("result.reportCount", { count: summary.issues.length }) : t("result.reportMissing"), firstIssue?.category ?? t("result.noCategory")],
+    [t("result.card.actions"), firstIssue?.plannedActions?.length ? t("result.controlledActions", { count: firstIssue.plannedActions.length }) : t("result.seeRuntimeLog"), firstIssue?.plannedActions?.join(" → ") || t("result.noDeclaredActions")],
+    [t("result.card.after"), repairResult?.finalVerificationPassed === true ? t("result.finalVerificationPassed") : t("result.notConfirmed"), repairResult?.operationId ? t("result.operation", { id: repairResult.operationId }) : t("result.awaitingResult")],
+    [t("result.card.unresolved"), t("result.notReturned"), t("result.checkLogs")],
   ];
   const conceptCards = [
-    ["诊断前", "1 项偏差", "Chrome 桥接版本不一致"],
-    ["执行动作", "4 个顺序步骤", "备份 → 替换 → 注册 → 核验"],
-    ["诊断后", "静态一致", "运行时仍需总控真实验收"],
-    ["未解决项", "1 项", "Computer Use 辅助传输待核验"],
+    [t("result.card.before"), t("result.concept.beforeValue"), t("result.concept.beforeDetail")],
+    [t("result.card.actions"), t("result.concept.actionsValue"), t("result.concept.actionsDetail")],
+    [t("result.card.after"), t("result.concept.afterValue"), t("result.concept.afterDetail")],
+    [t("result.card.unresolved"), t("result.concept.unresolvedValue"), t("result.concept.unresolvedDetail")],
   ];
   const cards = runtimeMode ? runtimeCards : conceptCards;
   return (
-    <section className="result-page" aria-label={runtimeMode ? "受控修复结果页" : "修复结果页概念"}>
-      <header className="result-hero"><span className="result-icon"><Icon name="check" size={24}/></span><div><small>{runtimeMode ? "受控修复结果 · 不自动退出" : "结果页概念 · 不自动退出"}</small><h3>修复流程已结束，等待用户查看结果</h3><p>本页持续保留，除非用户主动关闭或已明确开启“修复完成后自动关闭”。</p></div></header>
+    <section className="result-page" aria-label={runtimeMode ? t("result.ariaRuntime") : t("result.ariaConcept")}>
+      <header className="result-hero"><span className="result-icon"><Icon name="check" size={24}/></span><div><small>{runtimeMode ? t("result.kickerRuntime") : t("result.kickerConcept")}</small><h3>{t("result.heading")}</h3><p>{t("result.body")}</p></div></header>
       <div className="result-summary-grid">
         {cards.map(([label, value, detail]) => <article key={label}><span>{label}</span><strong>{value}</strong><p>{detail}</p></article>)}
       </div>
       <div className="result-details">
-        <div><h4>发现的问题</h4><p>{runtimeMode ? (firstIssue?.impact || "本轮报告未提供问题影响说明。") : "Chrome 本机桥接版本与目标清单不同，可能造成连接超时。"}</p></div>
-        <div><h4>执行结果</h4><p>{runtimeMode ? (repairResult?.finalVerificationPassed === true ? "运行时返回 finalVerificationPassed=true；页面保持停留供用户核对。" : "未收到合规的最终核验结果，不推断成功。") : "此处仅为信息架构演示；概念站未执行真实替换、注册或核验。"}</p></div>
-        <div><h4>证据与日志</h4><p>{runtimeMode ? "完整证据由运行时有界事件和应用日志保留；UI 不读取或展示本地路径。" : "保留修复前后哈希、操作阶段、风险和 GitHub 已知问题映射入口。"}</p></div>
+        <div><h4>{t("result.issuesTitle")}</h4><p>{runtimeMode ? (firstIssue?.impact || t("result.noImpact")) : t("result.conceptIssue")}</p></div>
+        <div><h4>{t("result.outcomeTitle")}</h4><p>{runtimeMode ? (repairResult?.finalVerificationPassed === true ? t("result.outcomeVerified") : t("result.outcomeUnverified")) : t("result.outcomeConcept")}</p></div>
+        <div><h4>{t("result.evidenceTitle")}</h4><p>{runtimeMode ? t("result.evidenceRuntime") : t("result.evidenceConcept")}</p></div>
       </div>
-      <footer><button type="button" className="secondary-button" onClick={onBack}>返回诊断页</button><button type="button" className="secondary-button" disabled={runtimeMode && !canOpenLogs} onClick={onOpenLogs}>打开完整日志{runtimeMode ? (canOpenLogs ? "" : "（不可执行）") : "（概念）"}</button><button type="button" className="secondary-button" disabled={!canExportSupportBundle} onClick={onRequestSupportBundle}>导出诊断支持包</button><button type="button" className="primary-button" disabled={runtimeMode && !canOpenGPT} onClick={onOpenGPT}>直接打开 GPT{runtimeMode ? (canOpenGPT ? "" : "（不可执行）") : "（概念）"}</button></footer>
+      <footer><button type="button" className="secondary-button" onClick={onBack}>{t("result.backToDiagnosis")}</button><button type="button" className="secondary-button" disabled={runtimeMode && !canOpenLogs} onClick={onOpenLogs}>{t("result.openFullLog")}{runtimeMode ? (canOpenLogs ? "" : t("common.unavailableSuffix")) : t("common.conceptSuffix")}</button><button type="button" className="secondary-button" disabled={!canExportSupportBundle} onClick={onRequestSupportBundle}>{t("result.exportSupportBundle")}</button><button type="button" className="primary-button" disabled={runtimeMode && !canOpenGPT} onClick={onOpenGPT}>{t("result.openGpt")}{runtimeMode ? (canOpenGPT ? "" : t("common.unavailableSuffix")) : t("common.conceptSuffix")}</button></footer>
     </section>
   );
 }
 
 export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, settings, setSettings, progress, setProgress, onRestoreDefaults, onExportConfig, onImportConfig, runtimeMode = false, bridgeAvailable = false, runtimeSettingsHydrated = false, runtimeSettingsError = "" }) {
+  const t = useI18n();
   const [gearOpen, setGearOpen] = useState(!runtimeMode);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [gamesOpen, setGamesOpen] = useState(false);
@@ -784,26 +811,26 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
       }).catch((error) => {
         if (!active) return;
         const message = error instanceof Error ? error.message : String(error);
-        setRuntimeError(`运行时能力信息不可用：${message}`);
-        setLogs((current) => [...current, runtimeLog({ level: "warn", category: "runtime", message: `运行时能力信息不可用：${message}` })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
+        setRuntimeError(uiMessage("runtime.appInfoUnavailable", { message }));
+        setLogs((current) => [...current, runtimeLog({ level: "warn", category: "runtime", message: uiMessage("runtime.appInfoUnavailable", { message }) })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
       });
     } else {
-      setRuntimeError("当前运行时未提供 getAppInfo；真实修复保持禁用。 ");
-      setLogs((current) => [...current, runtimeLog({ level: "warn", category: "runtime", message: "当前运行时未提供 getAppInfo；真实修复保持禁用。" })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
+      setRuntimeError(uiMessage("runtime.noGetAppInfo"));
+      setLogs((current) => [...current, runtimeLog({ level: "warn", category: "runtime", message: uiMessage("runtime.noGetAppInfo") })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
     }
     const initialReport = controller.capabilities.getDiagnosisReport ? Promise.resolve().then(() => controller.getDiagnosisReport()) : Promise.resolve(null);
     if (!controller.capabilities.getDiagnosisReport) {
-      setLogs((current) => [...current, runtimeLog({ level: "warn", category: "report", message: "当前运行时未提供 getDiagnosisReport；报告查看与修复保持禁用。" })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
+      setLogs((current) => [...current, runtimeLog({ level: "warn", category: "report", message: uiMessage("runtime.noGetDiagnosisReport") })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
     }
     if (!controller.capabilities.onEngineEvent) {
-      setRuntimeError("当前运行时未提供 onEngineEvent；真实修复保持禁用。 ");
-      setLogs((current) => [...current, runtimeLog({ level: "error", category: "runtime", message: "当前运行时未提供 onEngineEvent；真实修复保持禁用。" })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
+      setRuntimeError(uiMessage("runtime.noOnEngineEvent"));
+      setLogs((current) => [...current, runtimeLog({ level: "error", category: "runtime", message: uiMessage("runtime.noOnEngineEvent") })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
     }
     if (!controller.capabilities.onLogBatch) {
-      setLogs((current) => [...current, runtimeLog({ level: "warn", category: "logs", message: "当前运行时未提供 onLogBatch；仅显示 UI 自身状态消息。" })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
+      setLogs((current) => [...current, runtimeLog({ level: "warn", category: "logs", message: uiMessage("runtime.noOnLogBatch") })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
     }
     if (!controller.capabilities.getSettings || !controller.capabilities.saveSettings) {
-      setLogs((current) => [...current, runtimeLog({ level: "warn", category: "settings", message: "原生设置接口不完整；当前仅保留渲染层 localStorage 降级。" })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
+      setLogs((current) => [...current, runtimeLog({ level: "warn", category: "settings", message: uiMessage("runtime.settingsApiIncomplete") })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
     }
     initialReport.then((report) => {
       if (!active) return;
@@ -826,13 +853,13 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
         setProgress((current) => Math.max(current, gatedProgress));
       }
       if (normalized.failed || normalized.cancelled) {
-        const message = normalized.message || (normalized.cancelled ? "操作已取消" : "操作失败");
+        const message = normalized.message || uiMessage(normalized.cancelled ? "runtime.operationCancelled" : "runtime.operationFailed");
         setRuntimeError(message);
         setLogs((current) => [...current, runtimeLog({ level: normalized.cancelled ? "warn" : "error", category: "runtime", message })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
         setOperationBusy(false);
         if (operationKindRef.current === "repair") {
-          setRuntimePluginStates((current) => Object.fromEntries(Object.entries(current).map(([id, value]) => [id, value.state === "修复中" || value.state === "正在修复"
-            ? { ...value, state: "修复中断", risk: "需复查", tone: "warn", evidence: normalized.cancelled ? "修复已取消，状态需要重新诊断" : "修复未完成，请查看终端英文错误" }
+          setRuntimePluginStates((current) => Object.fromEntries(Object.entries(current).map(([id, value]) => [id, value.state === "plugin.state.repairing" || value.state === "plugin.state.repairInProgress"
+            ? { ...value, state: "plugin.state.repairInterrupted", risk: "plugin.risk.recheck", tone: "warn", evidence: uiMessage(normalized.cancelled ? "plugin.evidence.repairCancelled" : "plugin.evidence.repairIncomplete") }
             : value])));
         }
         setFlowState(operationKindRef.current === "repair" ? "AwaitingDecision" : "ReportReady");
@@ -846,9 +873,9 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
           if (normalized.verified) {
             setRuntimeError("");
             setFlowState((current) => current === "AwaitingDecision" ? current : "ReportReady");
-            setLogs((current) => [...current, runtimeLog({ level: "info", category: "diagnosis", message: "只读诊断终态已确认；报告决策状态由本次 runDiagnosis 返回的 Worker 内存报告驱动。" })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
+            setLogs((current) => [...current, runtimeLog({ level: "info", category: "diagnosis", message: uiMessage("runtime.diagnosisVerified") })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
           } else {
-            const message = "诊断收到 ResultReady，但诊断终态核验未通过；不进入报告决策状态。";
+            const message = uiMessage("runtime.diagnosisUnverified");
             setRuntimeError(message);
             setLogs((current) => [...current, runtimeLog({ level: "error", category: "diagnosis", message })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
           }
@@ -859,16 +886,16 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
           if (normalized.verified) {
             setRuntimePluginStates((current) => Object.fromEntries(Object.entries(current).map(([id, value]) => [id, {
               ...value,
-              state: "静态核验通过",
-              risk: "低",
+              state: "plugin.state.staticVerificationPassed",
+              risk: "plugin.risk.low",
               tone: "ok",
-              evidence: "修复完成，最终静态核验已通过",
+              evidence: uiMessage("plugin.evidence.repairVerified"),
             }])));
             setProgress(100);
             setFlowState("ResultReady");
             setScreen("result");
           } else {
-            const message = "修复收到 ResultReady，但最终核验门槛未满足；不进入修复结果页。";
+            const message = uiMessage("runtime.repairUnverified");
             setRuntimeError(message);
             setLogs((current) => [...current, runtimeLog({ level: "error", category: "verification", message })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
             setFlowState("AwaitingDecision");
@@ -877,7 +904,7 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
           return;
         }
         setProgress((current) => Math.min(current, 99));
-        const message = "收到无法归属到当前诊断或修复操作的 ResultReady；未推断修复成功。";
+        const message = uiMessage("runtime.unattributedResult");
         setRuntimeError(message);
         setLogs((current) => [...current, runtimeLog({ level: "error", category: "runtime", message })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
         operationKindRef.current = null;
@@ -894,7 +921,7 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
       }
       setRuntimePluginStates((current) => updatePluginStatesFromLogs(current, entries, phase));
       const dropped = Number(batch.droppedBeforeBatch) > 0
-        ? [runtimeLog({ level: "warn", category: "logs", message: `为控制内存，已丢弃更早的 ${Number(batch.droppedBeforeBatch)} 条日志。` })]
+        ? [runtimeLog({ level: "warn", category: "logs", message: uiMessage("runtime.logsDropped", { count: Number(batch.droppedBeforeBatch) }) })]
         : [];
       const incoming = [...dropped, ...entries.map(runtimeLog)];
       setLogs((current) => [...current, ...incoming].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
@@ -906,10 +933,11 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
   }, [runtimeMode, bridgeAvailable, runtimeController, setProgress]);
 
   useEffect(() => {
-    if (!runtimeSettingsError || runtimeSettingsError === lastSettingsErrorRef.current) return;
-    lastSettingsErrorRef.current = runtimeSettingsError;
-    setRuntimeError(`设置同步失败：${runtimeSettingsError}`);
-    setLogs((current) => [...current, runtimeLog({ level: "error", category: "settings", message: `设置同步失败：${runtimeSettingsError}` })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
+    const errorIdentity = JSON.stringify(runtimeSettingsError || "");
+    if (!runtimeSettingsError || errorIdentity === lastSettingsErrorRef.current) return;
+    lastSettingsErrorRef.current = errorIdentity;
+    setRuntimeError(uiMessage("runtime.settingsSyncFailed", { detail: runtimeSettingsError }));
+    setLogs((current) => [...current, runtimeLog({ level: "error", category: "settings", message: uiMessage("runtime.settingsSyncFailed", { detail: runtimeSettingsError }) })].slice(-Math.max(40, Number(logLimitRef.current) || 80)));
   }, [runtimeSettingsError]);
 
   useEffect(() => {
@@ -928,14 +956,14 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
   }, [flowState, setProgress]);
 
   const simulateReadOnlyScan = () => {
-    const stamp = new Date().toLocaleTimeString("zh-CN", { hour12: false });
+    const stamp = clockTime(new Date());
     scanTimersRef.current.forEach((timer) => clearTimeout(timer));
     setDemoSession((current) => current + 1);
     setScreen("diagnosis");
     setFlowState("Diagnosing");
     setProgressMode("determinate");
     setProgress(18);
-    setLogs((current) => [...current.slice(-10), { time: stamp, type: "INFO", category: "模拟", message: "刷新只读诊断摘要；未执行任何写入。" }]);
+    setLogs((current) => [...current.slice(-10), { time: stamp, type: "INFO", category: "simulation", categoryKey: "log.category.simulation", messageKey: "log.simulatedRefresh" }]);
     scanTimersRef.current = [
       setTimeout(() => setFlowState("ReportReady"), 480),
       setTimeout(() => setFlowState("AwaitingDecision"), 1100),
@@ -1007,10 +1035,10 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
   const runRuntimeAction = async (operation, category = "runtime") => {
     try {
       setRuntimeError("");
-      if (!runtimeController) throw new Error("Runtime bridge is unavailable.");
+      if (!runtimeController) throw Object.assign(new Error("Runtime bridge is unavailable."), { uiMessage: uiMessage("runtime.bridgeUnavailable") });
       return await operation();
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = error?.uiMessage ?? (error instanceof Error ? error.message : String(error));
       setRuntimeError(message);
       appendRuntimeMessage("error", category, message);
       return null;
@@ -1019,7 +1047,7 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
 
   const cancelRuntimeOperation = async () => {
     if (!runtimeController?.capabilities.cancelOperation) {
-      const message = "当前运行时未提供 cancelOperation。";
+      const message = uiMessage("runtime.noCancel");
       setRuntimeError(message);
       appendRuntimeMessage("warn", "runtime", message);
       return;
@@ -1028,15 +1056,15 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
     if (result?.cancelled === false) {
       setOperationBusy(false);
       operationKindRef.current = null;
-      appendRuntimeMessage("info", "runtime", "运行时确认当前没有可取消的活动操作。 ");
+      appendRuntimeMessage("info", "runtime", uiMessage("runtime.nothingToCancel"));
     } else if (result?.cancelled === true) {
-      appendRuntimeMessage("warn", "runtime", "取消请求已接受，等待 Cancelled 终态事件。 ");
+      appendRuntimeMessage("warn", "runtime", uiMessage("runtime.cancelAccepted"));
     }
   };
 
   const runRuntimeDiagnosis = async () => {
     if (!runtimeController?.capabilities.runDiagnosis || operationBusy) {
-      const message = operationBusy ? "当前已有受控操作正在执行。" : "当前运行时未提供只读诊断能力。";
+      const message = uiMessage(operationBusy ? "runtime.operationBusy" : "runtime.noDiagnosis");
       setRuntimeError(message);
       appendRuntimeMessage("warn", "diagnosis", message);
       return;
@@ -1050,11 +1078,11 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
     setProgressMode("determinate");
     setProgress(0);
     setDesktopStarted(false);
-    setRuntimePluginStates(freshRuntimePluginStates("诊断中", "正在收集本轮"));
+    setRuntimePluginStates(freshRuntimePluginStates("plugin.state.diagnosing", "plugin.evidence.collectingRound"));
     setRuntimeReport(null);
     setRuntimeRepairResult(null);
     setReportOpen(false);
-    appendRuntimeMessage("info", "diagnosis", "开始只读诊断；当前阶段不会执行插件写入。 ");
+    appendRuntimeMessage("info", "diagnosis", uiMessage("runtime.diagnosisStarted"));
     try {
       const report = await runtimeController.runDiagnosis();
       setRuntimeReport(report);
@@ -1064,7 +1092,7 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
         setReportOpen(true);
       } else {
         setFlowState("ReportReady");
-        appendRuntimeMessage("warn", "diagnosis", "诊断完成，但未返回可展示的报告。 ");
+        appendRuntimeMessage("warn", "diagnosis", uiMessage("runtime.diagnosisNoReport"));
       }
       if (operationKindRef.current !== "diagnosis") setOperationBusy(false);
     } catch (error) {
@@ -1077,7 +1105,7 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
 
   const openRuntimeReport = async () => {
     if (!runtimeController) {
-      const message = "Runtime bridge is unavailable.";
+      const message = uiMessage("runtime.bridgeUnavailable");
       setRuntimeError(message);
       appendRuntimeMessage("error", "report", message);
       return;
@@ -1087,7 +1115,7 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
       return;
     }
     if (!runtimeController.capabilities.getDiagnosisReport) {
-      const message = "当前运行时未提供诊断报告读取能力。";
+      const message = uiMessage("runtime.noReportReader");
       setRuntimeError(message);
       appendRuntimeMessage("warn", "report", message);
       return;
@@ -1100,7 +1128,7 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
         setReportOpen(true);
         setFlowState("AwaitingDecision");
       } else {
-        const message = "本次 Worker 生命周期内没有可用诊断报告；磁盘审计报告不能作为修复凭据。";
+        const message = uiMessage("runtime.noWorkerReport");
         setRuntimeError(message);
         appendRuntimeMessage("warn", "report", message);
       }
@@ -1115,7 +1143,7 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
     const eligibility = runtimeController?.getRepairEligibility(runtimeReport?.reportId);
     if (!eligibility?.allowed || operationBusy) {
       const reason = eligibility?.reason ?? "runtime-unavailable";
-      const message = operationBusy ? "当前已有受控操作正在执行。" : `当前报告不可修复：${repairEligibilityLabels[reason] ?? reason}`;
+      const message = operationBusy ? uiMessage("runtime.operationBusy") : uiMessage("runtime.repairNotAllowed", { reason: repairEligibilityMessage(reason) });
       setRuntimeError(message);
       appendRuntimeMessage("warn", "repair", message);
       return;
@@ -1131,17 +1159,17 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
     setDesktopStarted(false);
     setRuntimePluginStates((current) => Object.fromEntries(Object.entries(current).map(([id, value]) => [id, {
       ...value,
-      state: "修复中",
-      risk: value.tone === "ok" ? "低" : "处理中",
+      state: "plugin.state.repairing",
+      risk: value.tone === "ok" ? "plugin.risk.low" : "plugin.risk.processing",
       tone: value.tone === "ok" ? "ok" : "warn",
-      evidence: value.tone === "ok" ? "等待修复后静态复核" : "正在应用本轮受控修复",
+      evidence: uiMessage(value.tone === "ok" ? "plugin.evidence.awaitingRecheck" : "plugin.evidence.applyingRepair"),
     }])));
-    appendRuntimeMessage("warn", "repair", "用户已确认，开始受控修复；备份由冻结修复序列创建。 ");
+    appendRuntimeMessage("warn", "repair", uiMessage("runtime.repairConfirmed"));
     try {
       const result = await runtimeController.startRepair(runtimeReport.reportId);
       setRuntimeRepairResult(result);
       if (result?.finalVerificationPassed === true) {
-        appendRuntimeMessage("info", "repair", "修复命令已返回最终核验通过；结果页仍以 ResultReady 终态事件为准。 ");
+        appendRuntimeMessage("info", "repair", uiMessage("runtime.repairReturnedVerified"));
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -1154,7 +1182,7 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
 
   const requestSupportBundle = () => {
     if (!runtimeMode || !runtimeController?.capabilities.exportSupportBundle) {
-      appendRuntimeMessage("warn", "support-bundle", "当前运行时未提供支持包导出能力。 ");
+      appendRuntimeMessage("warn", "support-bundle", uiMessage("support.unavailable"));
       return;
     }
     setSupportBundleOpen(true);
@@ -1167,7 +1195,7 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
     setSupportBundleBusy(false);
     if (result?.created) {
       setSupportBundleOpen(false);
-      appendRuntimeMessage("info", "support-bundle", `支持包已生成：${result.fileName || "本地文件"}（已脱敏，${result.bytes || 0} 字节）。`);
+      appendRuntimeMessage("info", "support-bundle", uiMessage("support.created", { fileName: result.fileName || uiMessage("support.localFile"), bytes: result.bytes || 0 }));
     }
   };
 
@@ -1178,13 +1206,13 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
   return (
     <div className={`recovery-window layout-${scheme.id} material-${mix.material} palette-${paletteClass} density-${mix.density} geometry-${mix.geometry}`} data-testid="recovery-window" data-layout={scheme.id} data-material={mix.material} data-palette={mix.colorPreset} data-palette-base={paletteClass} data-game-active={gameActive ? "true" : "false"} style={glassStyle}>
       <header className="recovery-titlebar">
-        <div className="product-title"><img className="product-mark winbridge-mark" src={winbridgeMark} alt="" aria-hidden="true" /><div><strong>WinBridge Recovery <b>4.0</b></strong><small>{runtimeMode ? (bridgeAvailable ? "桌面运行态 · 受控桥接已连接" : "桌面运行态预览 · 操作不可执行") : "预发布概念 · 不连接修复引擎"}</small></div></div>
-        <div className="titlebar-runtime"><span className="architecture-chip">Electron UI · 独立 Worker</span></div>
-        <div className="titlebar-safety"><span className="readonly-chip"><Icon name="shield" size={14}/>{operationBusy ? "操作受控执行中" : "写入锁定"}</span>{!runtimeMode ? <button type="button" aria-label="概念窗口关闭按钮（无操作）"><Icon name="close" size={15}/></button> : null}</div>
+        <div className="product-title"><img className="product-mark winbridge-mark" src={winbridgeMark} alt="" aria-hidden="true" /><div><strong>WinBridge Recovery <b>4.0</b></strong><small>{runtimeMode ? (bridgeAvailable ? t("window.subtitleConnected") : t("window.subtitlePreviewOnly")) : t("window.subtitleConcept")}</small></div></div>
+        <div className="titlebar-runtime"><span className="architecture-chip">{t("window.architecture")}</span></div>
+        <div className="titlebar-safety"><span className="readonly-chip"><Icon name="shield" size={14}/>{operationBusy ? t("window.chipBusy") : t("window.chipLocked")}</span>{!runtimeMode ? <button type="button" aria-label={t("window.conceptCloseAria")}><Icon name="close" size={15}/></button> : null}</div>
       </header>
-      <div className="state-interface" aria-label="恢复协议状态接口">
-        <span>状态接口</span>
-        {recoveryStates.map((state, index) => <div key={state.id} className={`${flowState === state.id ? "is-current" : ""} ${state.write ? "is-write-state" : ""}`} aria-current={flowState === state.id ? "step" : undefined}><b>{state.id}</b><small>{state.label}</small>{index < recoveryStates.length - 1 ? <i>›</i> : null}</div>)}
+      <div className="state-interface" aria-label={t("window.stateInterfaceAria")}>
+        <span>{t("window.stateInterface")}</span>
+        {recoveryStates.map((state, index) => <div key={state.id} className={`${flowState === state.id ? "is-current" : ""} ${state.write ? "is-write-state" : ""}`} aria-current={flowState === state.id ? "step" : undefined}><b>{state.id}</b><small>{t(`recoveryState.${state.id}`)}</small>{index < recoveryStates.length - 1 ? <i>›</i> : null}</div>)}
       </div>
       <div className="recovery-body">
         <StageRail flowState={flowState} progress={progress} reduceMotion={settings.reduceMotion} desktopStarted={desktopStarted} />
@@ -1195,51 +1223,51 @@ export default function RecoveryWindow({ scheme, onSchemeChange, mix, setMix, se
       </div>
       <section className="progress-action-zone">
         <div className="fluid-demo-column">
-          <NebulaFluidProgress actualProgress={progress} channels={mix.channels} speed={mix.speed} reducedMotion={settings.reduceMotion} lowEndMode={settings.lowEndMode} indeterminate={progressMode === "indeterminate"} resultReady={flowState === "ResultReady"} sessionKey={demoSession} label={waitingForDiagnosis ? "等待只读诊断" : undefined} />
+          <NebulaFluidProgress actualProgress={progress} channels={mix.channels} speed={mix.speed} reducedMotion={settings.reduceMotion} lowEndMode={settings.lowEndMode} indeterminate={progressMode === "indeterminate"} resultReady={flowState === "ResultReady"} sessionKey={demoSession} label={waitingForDiagnosis ? t("progress.waitingLabel") : undefined} />
           {!runtimeMode ? <div className="progress-demo-controls">
-            <label className="progress-slider"><span>actualProgress</span><input ref={progressSliderRef} aria-label="预览进度" type="range" min="0" max={flowState === "ResultReady" ? "100" : "99"} value={progress} onInput={(event) => updateActualProgress(event.currentTarget.value)} onChange={(event) => updateActualProgress(event.currentTarget.value)} onKeyDown={handleProgressKeyDown}/><b>{progress}%</b></label>
-            <button type="button" className="demo-button" onClick={runVisualDemo} disabled={demoRunning}>{demoRunning ? "演示进行中…" : "自动演示缓冲动画"}</button>
-            <button type="button" className={`mode-button ${progressMode === "indeterminate" ? "is-on" : ""}`} onClick={() => setProgressMode((current) => current === "indeterminate" ? "determinate" : "indeterminate")}>{progressMode === "indeterminate" ? "结束长步骤呼吸" : "模拟未知长步骤"}</button>
-          </div> : waitingForDiagnosis ? <div className="diagnosis-start-hint" role="status" aria-live="polite"><Icon name="shield" size={14}/><div><strong>请先开始只读诊断</strong><span>点击下方“只读诊断”收集本机证据；此阶段不会写入任何插件。</span></div></div> : runtimeError ? <div className="runtime-error" role="alert"><Icon name="shield" size={14}/><span>{runtimeError}</span></div> : null}
+            <label className="progress-slider"><span>actualProgress</span><input ref={progressSliderRef} aria-label={t("progress.previewAria")} type="range" min="0" max={flowState === "ResultReady" ? "100" : "99"} value={progress} onInput={(event) => updateActualProgress(event.currentTarget.value)} onChange={(event) => updateActualProgress(event.currentTarget.value)} onKeyDown={handleProgressKeyDown}/><b>{progress}%</b></label>
+            <button type="button" className="demo-button" onClick={runVisualDemo} disabled={demoRunning}>{demoRunning ? t("progress.demoRunning") : t("progress.runDemo")}</button>
+            <button type="button" className={`mode-button ${progressMode === "indeterminate" ? "is-on" : ""}`} onClick={() => setProgressMode((current) => current === "indeterminate" ? "determinate" : "indeterminate")}>{progressMode === "indeterminate" ? t("progress.endIndeterminate") : t("progress.simulateIndeterminate")}</button>
+          </div> : waitingForDiagnosis ? <div className="diagnosis-start-hint" role="status" aria-live="polite"><Icon name="shield" size={14}/><div><strong>{t("progress.startHintTitle")}</strong><span>{t("progress.startHintBody")}</span></div></div> : runtimeError ? <div className="runtime-error" role="alert"><Icon name="shield" size={14}/><span>{formatMessage(t, runtimeError)}</span></div> : null}
         </div>
         <DecisionSummary flowState={flowState} actualProgress={progress} indeterminate={progressMode === "indeterminate"} report={runtimeReport} runtimeMode={runtimeMode}/>
       </section>
-      <section className="safety-strip" aria-label="安全边界信息条">
-        <span><Icon name="shield" size={14}/>路径门槛 <code>%USERPROFILE%\.codex\plugins</code></span>
-        <span>备份 <code>%LOCALAPPDATA%\WinBridge Recovery\Backups</code></span>
-        <span>自动修复 <b>OFF</b></span>
-        <span>修复后自动关闭 <b className={settings.autoCloseAfterRepair ? "is-on-text" : ""}>{settings.autoCloseAfterRepair ? "ON（用户已开启）" : "OFF（默认）"}</b></span>
+      <section className="safety-strip" aria-label={t("safety.ariaLabel")}>
+        <span><Icon name="shield" size={14}/>{t("safety.pathGate")} <code>%USERPROFILE%\.codex\plugins</code></span>
+        <span>{t("safety.backup")} <code>%LOCALAPPDATA%\WinBridge Recovery\Backups</code></span>
+        <span>{t("safety.autoRepair")} <b>OFF</b></span>
+        <span>{t("safety.autoClose")} <b className={settings.autoCloseAfterRepair ? "is-on-text" : ""}>{settings.autoCloseAfterRepair ? t("safety.autoCloseOn") : t("safety.autoCloseOff")}</b></span>
       </section>
       <footer className="command-dock">
         <div className="gear-anchor" ref={gearRef}>
           {gearOpen ? (
-            <div className="gear-menu" role="menu" aria-label="齿轮紧凑菜单">
-              <button type="button" role="menuitem" onClick={() => { setGamesOpen(true); setThemeOpen(false); }}><MenuGlyph name="games" size={17}/><span><strong>小游戏</strong><small>Snake · Minesweeper</small></span><b>2</b></button>
-              <button type="button" role="menuitem" onClick={() => setThemeOpen((value) => !value)}><MenuGlyph name="theme" size={17}/><span><strong>主题</strong><small>布局 × 材质 × 配色</small></span><b>›</b></button>
-              <button type="button" role="menuitem" onClick={() => setSocialOpen(true)}><MenuGlyph name="observe" size={17}/><span><strong>看看他</strong><small>48 小时只读动态</small></span><b aria-hidden="true">↗</b></button>
-              <button type="button" role="menuitem" onClick={() => setSettingsOpen(true)}><MenuGlyph name="settings" size={17}/><span><strong>更多设置</strong><small>完整设置中心</small></span><b>›</b></button>
+            <div className="gear-menu" role="menu" aria-label={t("gear.menuAria")}>
+              <button type="button" role="menuitem" onClick={() => { setGamesOpen(true); setThemeOpen(false); }}><MenuGlyph name="games" size={17}/><span><strong>{t("gear.games")}</strong><small>Snake · Minesweeper</small></span><b>2</b></button>
+              <button type="button" role="menuitem" onClick={() => setThemeOpen((value) => !value)}><MenuGlyph name="theme" size={17}/><span><strong>{t("gear.theme")}</strong><small>{t("gear.themeHint")}</small></span><b>›</b></button>
+              <button type="button" role="menuitem" onClick={() => setSocialOpen(true)}><MenuGlyph name="observe" size={17}/><span><strong>{t("gear.social")}</strong><small>{t("gear.socialHint")}</small></span><b aria-hidden="true">↗</b></button>
+              <button type="button" role="menuitem" onClick={() => setSettingsOpen(true)}><MenuGlyph name="settings" size={17}/><span><strong>{t("gear.settings")}</strong><small>{t("gear.settingsHint")}</small></span><b>›</b></button>
               {themeOpen ? (
-                <div ref={themePanelRef} className="theme-submenu quick-appearance" role="menu" aria-label="主题选择">
-                  <span>布局</span><div className="quick-layout-list">{schemes.map((item) => <button type="button" key={item.id} className={scheme.id === item.id ? "is-selected" : ""} onClick={() => onSchemeChange(item)}>{item.name}</button>)}</div>
-                  <span>材质</span><div><button type="button" className={mix.material === "glass" ? "is-selected" : ""} onClick={() => setMix((current) => ({ ...current, material: "glass" }))}>Glass</button><button type="button" className={mix.material === "solid" ? "is-selected" : ""} onClick={() => setMix((current) => ({ ...current, material: "solid" }))}>Solid</button></div>
-                  <span>配色</span><div>{colorPresets.map((preset) => <button type="button" key={preset.id} className={mix.colorPreset === preset.id ? "is-selected" : ""} title={preset.name} onClick={() => applyColorPreset(setMix, preset.id)}><i style={{ background: preset.accent }}/></button>)}</div>
+                <div ref={themePanelRef} className="theme-submenu quick-appearance" role="menu" aria-label={t("gear.themeAria")}>
+                  <span>{t("gear.layout")}</span><div className="quick-layout-list">{schemes.map((item) => <button type="button" key={item.id} className={scheme.id === item.id ? "is-selected" : ""} onClick={() => onSchemeChange(item)}>{t(`scheme.${item.id}.name`)}</button>)}</div>
+                  <span>{t("gear.material")}</span><div><button type="button" className={mix.material === "glass" ? "is-selected" : ""} onClick={() => setMix((current) => ({ ...current, material: "glass" }))}>Glass</button><button type="button" className={mix.material === "solid" ? "is-selected" : ""} onClick={() => setMix((current) => ({ ...current, material: "solid" }))}>Solid</button></div>
+                  <span>{t("gear.color")}</span><div>{colorPresets.map((preset) => <button type="button" key={preset.id} className={mix.colorPreset === preset.id ? "is-selected" : ""} title={t(`colorPreset.${preset.id}.name`)} onClick={() => applyColorPreset(setMix, preset.id)}><i style={{ background: preset.accent }}/></button>)}</div>
                 </div>
               ) : null}
             </div>
           ) : null}
-          <button className="gear-button" type="button" aria-label="打开设置菜单" aria-expanded={gearOpen} onClick={() => setGearOpen((value) => !value)}><MenuGlyph name="settings" size={20}/></button>
+          <button className="gear-button" type="button" aria-label={t("gear.openAria")} aria-expanded={gearOpen} onClick={() => setGearOpen((value) => !value)}><MenuGlyph name="settings" size={20}/></button>
         </div>
-        <div className="command-status"><span>{flowState || (runtimeMode ? "请先开始只读诊断" : "等待只读诊断")}</span><small>{waitingForDiagnosis ? "只读阶段不会写入任何插件" : "动画仅缓冲呈现，不影响真实状态"}</small></div>
+        <div className="command-status"><span>{flowState || (runtimeMode ? t("command.waitingRuntime") : t("command.waitingConcept"))}</span><small>{waitingForDiagnosis ? t("command.readOnlyHint") : t("command.animationHint")}</small></div>
         <div className="primary-actions">
-          <button type="button" onClick={runtimeMode ? runRuntimeDiagnosis : simulateReadOnlyScan} disabled={runtimeMode && (!runtimeController?.capabilities.runDiagnosis || operationBusy)}>{runtimeMode && operationBusy ? "诊断/修复进行中…" : runtimeMode && !runtimeController?.capabilities.runDiagnosis ? "只读诊断（不可执行）" : waitingForDiagnosis ? "开始只读诊断" : "只读诊断"}</button>
-          <button type="button" onClick={runtimeMode ? openRuntimeReport : () => { setReportOpen(true); setFlowState("AwaitingDecision"); }} disabled={runtimeMode && !runtimeReport && !runtimeController?.capabilities.getDiagnosisReport}>查看修复说明</button>
-          <button type="button" disabled title="备份只在用户确认修复后由冻结修复序列创建">备份随修复创建</button>
-          <button type="button" disabled title="当前 preload 契约不提供独立回滚命令">回滚不可单独执行</button>
-          <button type="button" className="repair-action" title={!runtimeMode ? "打开概念报告并演示用户确认入口" : canRepair ? "打开报告并由用户再次确认" : `当前不可修复：${repairEligibilityLabels[repairEligibility.reason] ?? repairEligibility.reason}`} onClick={() => setReportOpen(true)} disabled={runtimeMode ? !canRepair : false}>用户决定修复</button>
-          <button type="button" onClick={runtimeMode ? cancelRuntimeOperation : undefined} disabled={!runtimeMode || !operationBusy || !runtimeController?.capabilities.cancelOperation}>取消当前操作</button>
-          {runtimeMode ? <><button type="button" onClick={() => runRuntimeAction(() => runtimeController.openLogs(), "logs")} disabled={!runtimeController?.capabilities.openLogs}>打开日志</button><button type="button" onClick={requestSupportBundle} disabled={!runtimeController?.capabilities.exportSupportBundle}>导出支持包</button></> : null}
-          {!runtimeMode ? <button type="button" className="result-action" onClick={() => { setScreen("result"); setFlowState("ResultReady"); setProgress(100); }}>预览结果页</button> : null}
-          <button type="button" className="gpt-action" disabled={runtimeMode && !runtimeController?.capabilities.openGPT} onClick={() => runtimeMode ? runRuntimeAction(() => runtimeController.openGPT(), "gpt") : null}>直接打开 GPT{runtimeMode && !runtimeController?.capabilities.openGPT ? "（不可执行）" : ""}</button>
+          <button type="button" onClick={runtimeMode ? runRuntimeDiagnosis : simulateReadOnlyScan} disabled={runtimeMode && (!runtimeController?.capabilities.runDiagnosis || operationBusy)}>{runtimeMode && operationBusy ? t("actions.busy") : runtimeMode && !runtimeController?.capabilities.runDiagnosis ? t("actions.diagnoseUnavailable") : waitingForDiagnosis ? t("actions.startDiagnosis") : t("actions.diagnose")}</button>
+          <button type="button" onClick={runtimeMode ? openRuntimeReport : () => { setReportOpen(true); setFlowState("AwaitingDecision"); }} disabled={runtimeMode && !runtimeReport && !runtimeController?.capabilities.getDiagnosisReport}>{t("actions.viewRepairDetails")}</button>
+          <button type="button" disabled title={t("actions.backupTitle")}>{t("actions.backupWithRepair")}</button>
+          <button type="button" disabled title={t("actions.rollbackTitle")}>{t("actions.rollbackUnavailable")}</button>
+          <button type="button" className="repair-action" title={!runtimeMode ? t("actions.authorizeConceptTitle") : canRepair ? t("actions.authorizeRuntimeTitle") : t("actions.repairUnavailableTitle", { reason: repairEligibilityMessage(repairEligibility.reason) })} onClick={() => setReportOpen(true)} disabled={runtimeMode ? !canRepair : false}>{t("actions.authorizeRepair")}</button>
+          <button type="button" onClick={runtimeMode ? cancelRuntimeOperation : undefined} disabled={!runtimeMode || !operationBusy || !runtimeController?.capabilities.cancelOperation}>{t("actions.cancel")}</button>
+          {runtimeMode ? <><button type="button" onClick={() => runRuntimeAction(() => runtimeController.openLogs(), "logs")} disabled={!runtimeController?.capabilities.openLogs}>{t("actions.openLogs")}</button><button type="button" onClick={requestSupportBundle} disabled={!runtimeController?.capabilities.exportSupportBundle}>{t("actions.exportSupportBundle")}</button></> : null}
+          {!runtimeMode ? <button type="button" className="result-action" onClick={() => { setScreen("result"); setFlowState("ResultReady"); setProgress(100); }}>{t("actions.previewResult")}</button> : null}
+          <button type="button" className="gpt-action" disabled={runtimeMode && !runtimeController?.capabilities.openGPT} onClick={() => runtimeMode ? runRuntimeAction(() => runtimeController.openGPT(), "gpt") : null}>{t("actions.openGpt")}{runtimeMode && !runtimeController?.capabilities.openGPT ? t("common.unavailableSuffix") : ""}</button>
         </div>
       </footer>
       {gamesOpen ? <GameCenter onClose={() => setGamesOpen(false)} onGameActiveChange={setGameActive} appearanceClass={`palette-${paletteClass} material-${mix.material}`} appearanceStyle={glassStyle} /> : null}

@@ -73,8 +73,14 @@ test('runtime UI advances plugin evidence live and keeps post-start verification
   assert.match(source, /updatePluginStatesFromLogs\(current, entries, phase\)/);
   assert.match(source, /plugin-layers/);
   assert.match(source, /layers\.interaction/);
-  assert.match(source, /client import 不等于真实交互/);
-  assert.match(source, /flowState === "Repairing" \? "修复中"/);
+  // Interface copy lives in the i18n catalogs; the component references keys.
+  const zhCatalog = fs.readFileSync(path.join(projectRoot, '..', 'design-lab', 'src', 'i18n', 'zh-CN.js'), 'utf8');
+  const enCatalog = fs.readFileSync(path.join(projectRoot, '..', 'design-lab', 'src', 'i18n', 'en-US.js'), 'utf8');
+  assert.match(source, /interaction: \{ state: "plugin\.layer\.interactionUnverified", evidence: uiMessage\("plugin\.evidence\.clientImportNotInteraction"\) \}/);
+  assert.match(zhCatalog, /clientImportNotInteraction: "client import 不等于真实交互"/);
+  assert.match(enCatalog, /clientImportNotInteraction: "A client import is not a real interaction"/);
+  assert.match(source, /flowState === "Repairing" \? t\("stages\.detail\.repairing"\)/);
+  assert.match(zhCatalog, /repairing: "修复中"/);
   assert.doesNotMatch(source, /engineStageState → presentedStageState/);
   assert.match(mockSource, /Desktop started\. Waiting for two consecutive clean reconciliation checks/);
   assert.match(mockSource, /await wait\(2200\)/);

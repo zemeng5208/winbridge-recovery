@@ -363,7 +363,7 @@ button:disabled { cursor: default; opacity: .55; }
   border-radius: var(--app-radius);
   background: var(--app-panel);
 }
-.rail-heading, .plugin-panel > header { display: flex; align-items: center; justify-content: space-between; min-height: 34px; padding: 0 10px; border-bottom: 1px solid var(--app-border); }
+.rail-heading, .plugin-panel > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 34px; padding: 0 10px; border-bottom: 1px solid var(--app-border); }
 .rail-heading span, .plugin-panel > header span { font-weight: 700; }
 .rail-heading small, .plugin-panel > header small { color: var(--app-muted); font-size: calc(8px * var(--ui-font-scale, 1.20)); }
 .stage-rail ol { display: grid; gap: 0; margin: 0; padding: 6px 0 0; list-style: none; }
@@ -1701,9 +1701,13 @@ button:disabled { cursor: default; opacity: .55; }
 }
 
 .nebula-fluid-copy strong {
+  min-width: 0;
+  overflow: hidden;
   font-size: calc(16px * var(--ui-font-scale, 1.20));
   font-weight: 720;
   letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .nebula-fluid-copy small {

@@ -3,6 +3,7 @@ import { ProgressFlowRenderer } from "../../third_party/nebula-progress/progress
 import { getProgressReferenceAtlas } from "../../third_party/nebula-progress/progress-reference-atlases.js";
 import { drawNebulaCanvasFallback } from "../lib/nebulaCanvasFallback.js";
 import { sampleSeamlessFlowClock } from "../lib/seamlessFlowClock.js";
+import { useI18n } from "../i18n/I18nProvider.jsx";
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, Number(value) || 0));
 
@@ -60,10 +61,12 @@ export default function NebulaFluidProgress({
   indeterminate = false,
   resultReady = false,
   sessionKey = 0,
-  label = "诊断进度",
+  label,
   compact = false,
   speed = 1,
 }) {
+  const t = useI18n();
+  label = label ?? t("progress.label");
   const canvasRef = useRef(null);
   const { displayed: displayedProgress, historyRef, intervalRef } = useDisplayedProgress(actualProgress, resultReady, sessionKey, reducedMotion);
   const displayedRef = useRef(displayedProgress);
@@ -138,7 +141,7 @@ export default function NebulaFluidProgress({
   const progress = clamp(displayedProgress, 0, resultReady ? 100 : 99);
   return (
     <div className={`nebula-fluid ${compact ? "is-compact" : ""} ${indeterminate ? "is-indeterminate" : ""}`} data-testid="nebula-fluid-progress" data-renderer={renderMode} data-actual-progress={Math.round(actualProgress)} data-displayed-progress={Math.round(progress)} data-step-sequence={historyRef.current.join(",")} data-step-interval-ms={intervalRef.current}>
-      <div className="nebula-fluid-meta"><span>MIT FLUID ENGINE / {renderMode.toUpperCase()}</span><strong>{indeterminate ? "可信值保持" : "平滑追赶"}</strong></div>
+      <div className="nebula-fluid-meta"><span>MIT FLUID ENGINE / {renderMode.toUpperCase()}</span><strong>{indeterminate ? t("progress.holding") : t("progress.smoothing")}</strong></div>
       <div className="nebula-fluid-stage" role="progressbar" aria-label={label} aria-valuemin="0" aria-valuemax="100" aria-valuenow={Math.round(progress)}>
         <canvas ref={canvasRef} className="nebula-fluid-canvas" aria-hidden="true" />
         <span className="nebula-fluid-copy"><strong>{label}</strong><small>{indeterminate ? "LONG STEP / NO FAKE ADVANCE" : "SAFE RECOVERY PROTOCOL"}</small></span>

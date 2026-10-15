@@ -1,4 +1,5 @@
 import { colorPresets, schemes } from "../data/concepts.js";
+import { useI18n } from "../i18n/I18nProvider.jsx";
 
 export function applyColorPreset(setMix, presetId) {
   const preset = colorPresets.find((item) => item.id === presetId) ?? colorPresets[0];
@@ -14,6 +15,7 @@ export function applyColorPreset(setMix, presetId) {
 }
 
 export default function MixPanel({ scheme, onSchemeChange, mix, setMix, settings, setSettings, progress, setProgress }) {
+  const t = useI18n();
   const setField = (key) => (event) => {
     const value = event.target.type === "range" ? Number(event.target.value) : event.target.value;
     setMix((current) => ({ ...current, [key]: value }));
@@ -29,11 +31,11 @@ export default function MixPanel({ scheme, onSchemeChange, mix, setMix, settings
 
   return (
     <aside className="mix-panel">
-      <header><span>外观组合器</span><h3>{scheme.name}</h3><p>布局 × 材质 × 配色互相独立；仅更新概念状态。</p></header>
+      <header><span>外观组合器</span><h3>{t(`scheme.${scheme.id}.name`)}</h3><p>布局 × 材质 × 配色互相独立；仅更新概念状态。</p></header>
       <div className="mix-section appearance-axis-stack">
         <strong className="mix-section-title">1 · 布局</strong>
         <div className="mini-choice-grid layout-choice-grid">
-          {schemes.map((item) => <button type="button" key={item.id} className={scheme.id === item.id ? "is-selected" : ""} onClick={() => onSchemeChange(item)}><span>{item.name}</span></button>)}
+          {schemes.map((item) => <button type="button" key={item.id} className={scheme.id === item.id ? "is-selected" : ""} onClick={() => onSchemeChange(item)}><span>{t(`scheme.${item.id}.name`)}</span></button>)}
         </div>
         <strong className="mix-section-title">2 · 材质</strong>
         <div className="segmented-choice">
@@ -42,7 +44,7 @@ export default function MixPanel({ scheme, onSchemeChange, mix, setMix, settings
         </div>
         <strong className="mix-section-title">3 · 配色</strong>
         <div className="preset-list compact-presets">
-          {colorPresets.map((preset) => <button type="button" key={preset.id} className={mix.colorPreset === preset.id ? "is-selected" : ""} onClick={() => applyColorPreset(setMix, preset.id)}><span className="preset-dots">{preset.swatches.map((color) => <i key={color} style={{ background: color }}/>)}</span><b>{preset.name}</b></button>)}
+          {colorPresets.map((preset) => <button type="button" key={preset.id} className={mix.colorPreset === preset.id ? "is-selected" : ""} onClick={() => applyColorPreset(setMix, preset.id)}><span className="preset-dots">{preset.swatches.map((color) => <i key={color} style={{ background: color }}/>)}</span><b>{t(`colorPreset.${preset.id}.name`)}</b></button>)}
         </div>
       </div>
       <div className="mix-section">

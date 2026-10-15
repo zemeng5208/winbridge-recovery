@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "../Icons.jsx";
+import { useI18n } from "../../i18n/I18nProvider.jsx";
 
 const COLS = 24;
 const ROWS = 16;
@@ -46,15 +47,8 @@ function initialSnakeState() {
   return { snake, food: createFood(snake), score: 0, status: "idle" };
 }
 
-const STATUS_LABELS = Object.freeze({
-  idle: "等待开始",
-  running: "进行中",
-  paused: "已暂停",
-  gameover: "游戏结束",
-  won: "已完成棋盘",
-});
-
 export default function SnakeGame() {
+  const t = useI18n();
   const [game, setGame] = useState(initialSnakeState);
   const directionRef = useRef({ ...INITIAL_DIRECTION });
   const queuedDirectionRef = useRef({ ...INITIAL_DIRECTION });
@@ -141,30 +135,30 @@ export default function SnakeGame() {
   return (
     <div className="local-game snake-game">
       <div className="game-toolbar">
-        <div className="game-metric"><span>分数</span><strong>{game.score}</strong></div>
-        <div className={`game-status status-${game.status}`}><i/>{STATUS_LABELS[game.status]}</div>
+        <div className="game-metric"><span>{t("games.snake.score")}</span><strong>{game.score}</strong></div>
+        <div className={`game-status status-${game.status}`}><i/>{t(`games.snake.status.${game.status}`)}</div>
         <div className="game-toolbar-actions">
-          <button type="button" onClick={toggleRunning} disabled={ended}><Icon name={game.status === "running" ? "pause" : "play"} size={15}/>{game.status === "running" ? "暂停" : game.status === "paused" ? "继续" : "开始"}</button>
-          <button type="button" onClick={restart}><Icon name="restart" size={15}/>重新开始</button>
+          <button type="button" onClick={toggleRunning} disabled={ended}><Icon name={game.status === "running" ? "pause" : "play"} size={15}/>{game.status === "running" ? t("games.snake.pause") : game.status === "paused" ? t("games.snake.resume") : t("games.snake.start")}</button>
+          <button type="button" onClick={restart}><Icon name="restart" size={15}/>{t("games.restart")}</button>
         </div>
       </div>
       <div className="snake-board-viewport">
-        <div ref={boardRef} className="snake-board" tabIndex={-1} role="application" aria-label="Snake 棋盘，使用方向键或 WASD 控制" onPointerDown={() => boardRef.current?.focus()}>
+        <div ref={boardRef} className="snake-board" tabIndex={-1} role="application" aria-label={t("games.snake.boardAria")} onPointerDown={() => boardRef.current?.focus()}>
           {cells.map((cell) => {
             const segmentIndex = snakeCells.get(`${cell.x}:${cell.y}`);
             const hasSnake = segmentIndex !== undefined;
             const hasFood = game.food?.x === cell.x && game.food?.y === cell.y;
             return <span key={`${cell.x}-${cell.y}`} className={`snake-cell ${hasSnake ? (segmentIndex === 0 ? "is-head" : "is-body") : ""} ${hasFood ? "has-food" : ""}`}>{hasFood ? <i aria-hidden="true"/> : null}</span>;
           })}
-          {ended ? <div className="game-board-message"><strong>{game.status === "won" ? "棋盘完成" : "本局结束"}</strong><span>得分 {game.score}</span><button type="button" onClick={restart}>重新开始</button></div> : null}
+          {ended ? <div className="game-board-message"><strong>{game.status === "won" ? t("games.snake.boardComplete") : t("games.gameOver")}</strong><span>{t("games.snake.finalScore", { score: game.score })}</span><button type="button" onClick={restart}>{t("games.restart")}</button></div> : null}
         </div>
       </div>
-      <div className="snake-controls" aria-label="Snake 方向控制">
-        <button type="button" aria-label="向上" onPointerDown={(event) => pointerDirection(event, DIRECTION_KEYS.ArrowUp)}><Icon name="up" size={15}/></button>
-        <button type="button" aria-label="向左" onPointerDown={(event) => pointerDirection(event, DIRECTION_KEYS.ArrowLeft)}><Icon name="left" size={15}/></button>
-        <button type="button" aria-label="向下" onPointerDown={(event) => pointerDirection(event, DIRECTION_KEYS.ArrowDown)}><Icon name="down" size={15}/></button>
-        <button type="button" aria-label="向右" onPointerDown={(event) => pointerDirection(event, DIRECTION_KEYS.ArrowRight)}><Icon name="right" size={15}/></button>
-        <span>方向键 / WASD 控制，空格暂停，R 重开</span>
+      <div className="snake-controls" aria-label={t("games.snake.controlsAria")}>
+        <button type="button" aria-label={t("games.snake.up")} onPointerDown={(event) => pointerDirection(event, DIRECTION_KEYS.ArrowUp)}><Icon name="up" size={15}/></button>
+        <button type="button" aria-label={t("games.snake.left")} onPointerDown={(event) => pointerDirection(event, DIRECTION_KEYS.ArrowLeft)}><Icon name="left" size={15}/></button>
+        <button type="button" aria-label={t("games.snake.down")} onPointerDown={(event) => pointerDirection(event, DIRECTION_KEYS.ArrowDown)}><Icon name="down" size={15}/></button>
+        <button type="button" aria-label={t("games.snake.right")} onPointerDown={(event) => pointerDirection(event, DIRECTION_KEYS.ArrowRight)}><Icon name="right" size={15}/></button>
+        <span>{t("games.snake.help")}</span>
       </div>
     </div>
   );

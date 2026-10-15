@@ -16,6 +16,7 @@ Real repair is disabled by default. The desktop demonstration build therefore ca
 ```powershell
 cd v4\design-lab
 npm ci
+npm test
 npm run build
 
 cd ..\runtime
@@ -29,6 +30,16 @@ npm start
 ```
 
 `pack:check` validates packaging inputs without creating a package.
+
+## Interface language
+
+The desktop interface supports Simplified Chinese (`zh-CN`) and English (`en-US`). Choose it under Settings → General → Interface language; the change applies immediately and is saved by the runtime as the `language` setting (settings schema v1), so it survives restarts. It is stored in `settings/interface.json` next to `settings.json`, which keeps its 4.0.0 shape so an older build can still read it.
+
+- Existing installs whose settings were written before this option keep the Chinese interface.
+- A new install starts with `system`, which follows the Windows display language: any Chinese display language uses `zh-CN`; every other display language uses `en-US`.
+- Restore defaults keeps the selected language.
+
+Interface copy lives in `design-lab/src/i18n/zh-CN.js` and `en-US.js` with matching keys (`npm test` checks parity, placeholders, and that every surface renders without untranslated text). Output from the frozen engine, Worker, and PowerShell is shown verbatim and is not translated.
 
 ## Collaboration
 
