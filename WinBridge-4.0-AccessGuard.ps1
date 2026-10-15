@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
   [ValidateSet('Preflight', 'Diagnose', 'PostFailure')]
   [string]$Mode = 'Diagnose',

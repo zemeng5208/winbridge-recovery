@@ -11,6 +11,7 @@
     "sync:frontend": "node scripts/sync-frontend.cjs",
     "verify:frontend": "node scripts/verify-frontend.cjs",
     "verify:snapshot": "node scripts/verify-engine-snapshot.cjs",
+    "verify:package": "node scripts/verify-packaged-engine.cjs",
     "pack:check": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Pack-Windows.ps1 -ValidateOnly",
     "pack:win": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Pack-Windows.ps1",
     "release:win": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\Build-Release.ps1"

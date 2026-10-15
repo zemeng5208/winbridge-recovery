@@ -5,7 +5,8 @@
   "sourceRepository": "https://github.com/zemeng5208/winbridge-recovery.git",
   "sourceCommit": "d9e587f458f84f7f20e6859ddbf6681d70c10ddf",
   "localPatches": [
-    "2026-09-04: tolerate only remote marketplace catalog transport/JSON failures and require subsequent local static validation"
+    "2026-09-04: tolerate only remote marketplace catalog transport/JSON failures and require subsequent local static validation",
+    "2026-10-15: store WinBridge-4.0-AccessGuard.ps1 as UTF-8 with BOM so Windows PowerShell 5.1 parses its non-ASCII text on non-Chinese code pages (encoding only; no logic change)"
   ],
   "capturedAt": "2026-08-23T07:54:04.6281536+08:00",
   "license": "MIT",
@@ -41,7 +42,7 @@
     },
     {
       "path": "WinBridge-4.0-AccessGuard.ps1",
-      "sha256": "5252E231CC14B7E70B289FE8538D6FF2407450D3056DF971A49B45159547933E"
+      "sha256": "5057E5744C40BE08FB806F4E4D117437EFA9A098247C87229594B149A0B96FAA"
     },
     {
       "path": "WinBridge-4.0-Preflight.ps1",
