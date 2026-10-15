@@ -5,7 +5,8 @@
   "sourceRepository": "https://github.com/zemeng5208/winbridge-recovery.git",
   "sourceCommit": "d9e587f458f84f7f20e6859ddbf6681d70c10ddf",
   "localPatches": [
-    "2026-09-04: tolerate only remote marketplace catalog transport/JSON failures and require subsequent local static validation"
+    "2026-09-04: tolerate only remote marketplace catalog transport/JSON failures and require subsequent local static validation",
+    "2026-10-15: derive bundled-plugin resource-mirror checks from the installed package marketplace manifest instead of a fixed list that required plugins/sites/.app.json"
   ],
   "capturedAt": "2026-08-23T07:54:04.6281536+08:00",
   "license": "MIT",
@@ -37,7 +38,7 @@
     },
     {
       "path": "Start-WinBridge-Recovery.ps1",
-      "sha256": "021BAB1B2AED2047CDBEE735E5606F4546066981DF22C56C8267C397C237AE76"
+      "sha256": "0B09D37F8DC2748FAE1F0E65E0B8D922D06170168C9DFC23AA041A7E51BE0B9A"
     },
     {
       "path": "WinBridge-4.0-AccessGuard.ps1",

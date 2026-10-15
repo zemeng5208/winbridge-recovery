@@ -616,15 +616,57 @@ function Get-PluginVersion {
 function Get-OfficialRelativePath {
   param(
     [Parameter(Mandatory = $true)][string]$Value,
-    [Parameter(Mandatory = $true)][string]$FieldName
+    [Parameter(Mandatory = $true)][string]$FieldName,
+    [string]$ManifestName = 'cua_node'
   )
   $relative = $Value.Replace('/', '\').Trim().TrimStart('\')
   if ([string]::IsNullOrWhiteSpace($relative) -or
       [System.IO.Path]::IsPathRooted($relative) -or
       @($relative.Split('\') | Where-Object { $_ -eq '..' }).Count -gt 0) {
-    throw "Official cua_node manifest contains an unsafe $FieldName path: $Value"
+    throw "Official $ManifestName manifest contains an unsafe $FieldName path: $Value"
   }
   return $relative
+}
+
+function Get-BundledPluginMirrorFiles {
+  # The installed package's own marketplace manifest is the inventory of its
+  # bundled plugins, which changes between Codex releases (26.1007 ships no
+  # "sites" plugin, for example). Every plugin the manifest declares must ship
+  # its plugin manifest; an app descriptor (.app.json) is verified for the
+  # plugins whose official package contains one.
+  param(
+    [Parameter(Mandatory = $true)][string]$MarketplaceRoot,
+    [Parameter(Mandatory = $true)][string]$ManifestPath
+  )
+  $manifest = Read-JsonFile $ManifestPath
+  $declared = @($manifest.plugins | Where-Object { $null -ne $_ })
+  if ($declared.Count -eq 0) {
+    throw "Official bundled marketplace manifest declares no plugins: $ManifestPath"
+  }
+  $files = New-Object System.Collections.ArrayList
+  foreach ($plugin in $declared) {
+    $source = $plugin.source
+    if ($source -is [string]) {
+      $sourcePath = $source
+    } elseif ($null -ne $source -and $null -ne $source.path -and ($null -eq $source.source -or [string]$source.source -eq 'local')) {
+      $sourcePath = [string]$source.path
+    } elseif ($null -ne $source -and $null -eq $source.path -and -not [string]::IsNullOrWhiteSpace([string]$source.source)) {
+      continue # A remote plugin source is not part of the installed package.
+    } else {
+      throw "Official bundled marketplace manifest has an unsupported source for plugin '$($plugin.name)'."
+    }
+    $pluginRelative = Get-OfficialRelativePath $sourcePath 'plugin source' 'bundled marketplace'
+    $pluginRelative = (@($pluginRelative.Split('\') | Where-Object { $_ -ne '' -and $_ -ne '.' }) -join '\')
+    if ([string]::IsNullOrWhiteSpace($pluginRelative)) {
+      throw "Official bundled marketplace manifest has an empty source path for plugin '$($plugin.name)'."
+    }
+    [void]$files.Add((Join-Path 'plugins\openai-bundled' (Join-Path $pluginRelative '.codex-plugin\plugin.json')))
+    $appDescriptor = Join-Path $pluginRelative '.app.json'
+    if ([System.IO.File]::Exists((Get-LongPath (Join-Path $MarketplaceRoot $appDescriptor)))) {
+      [void]$files.Add((Join-Path 'plugins\openai-bundled' $appDescriptor))
+    }
+  }
+  return @($files)
 }
 
 function Get-CurrentContext {
@@ -702,11 +744,15 @@ function Get-CurrentContext {
     'plugins\openai-bundled\plugins\chrome\scripts\browser-client.mjs',
     'plugins\openai-bundled\plugins\computer-use\.codex-plugin\plugin.json',
     'plugins\openai-bundled\plugins\computer-use\skills\computer-use\SKILL.md',
-    'plugins\openai-bundled\plugins\sites\.app.json',
     'cua_node\manifest.json',
     (Join-Path 'cua_node' $cuaNodeRelative),
     (Join-Path 'cua_node' $cuaNodeReplRelative)
   ) + $resourceMirrorFiles
+  $knownCriticalFiles = New-Object 'System.Collections.Generic.HashSet[string]' ([System.StringComparer]::OrdinalIgnoreCase)
+  foreach ($relative in $resourceMirrorCriticalFiles) { [void]$knownCriticalFiles.Add([string]$relative) }
+  foreach ($relative in @(Get-BundledPluginMirrorFiles $sourceMarketplace $sourceManifest)) {
+    if ($knownCriticalFiles.Add([string]$relative)) { $resourceMirrorCriticalFiles += [string]$relative }
+  }
   return [pscustomobject]@{
     Package = $package
     PackageVersion = [string]$package.Version
