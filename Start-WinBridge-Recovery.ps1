@@ -665,7 +665,11 @@ function Get-CurrentContext {
       (Split-Path -Parent $cuaNodeModulesRelative) -ne $cuaBinRelative) {
     throw 'Official cua_node manifest uses incompatible runtime roots.'
   }
-  $cuaHashFiles = @('manifest.json', $cuaNodeRelative, $cuaNodeReplRelative)
+  # Codex Desktop keeps its cua_node runtime copy in runtimes\cua_node\<key>,
+  # keyed by these entries with forward slashes, and deletes every other
+  # 16-hex-digit runtime directory on startup. Hashing the same names makes
+  # the safe runtime the directory Desktop itself verifies and keeps.
+  $cuaHashFiles = @('manifest.json', $cuaNodeRelative.Replace('\', '/'), $cuaNodeReplRelative.Replace('\', '/'))
   $cliContentHash = Get-ContentDirectoryHash $resources $cliFiles
   $cuaContentHash = Get-ContentDirectoryHash $cuaRoot $cuaHashFiles
   $bundledHashFiles = @(

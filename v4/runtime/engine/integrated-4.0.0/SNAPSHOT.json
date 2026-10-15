@@ -5,7 +5,8 @@
   "sourceRepository": "https://github.com/zemeng5208/winbridge-recovery.git",
   "sourceCommit": "d9e587f458f84f7f20e6859ddbf6681d70c10ddf",
   "localPatches": [
-    "2026-09-04: tolerate only remote marketplace catalog transport/JSON failures and require subsequent local static validation"
+    "2026-09-04: tolerate only remote marketplace catalog transport/JSON failures and require subsequent local static validation",
+    "2026-10-15: key the safe cua_node runtime with forward-slash entry names, as Codex Desktop does, so Desktop keeps it instead of pruning it on startup"
   ],
   "capturedAt": "2026-08-23T07:54:04.6281536+08:00",
   "license": "MIT",
@@ -37,7 +38,7 @@
     },
     {
       "path": "Start-WinBridge-Recovery.ps1",
-      "sha256": "021BAB1B2AED2047CDBEE735E5606F4546066981DF22C56C8267C397C237AE76"
+      "sha256": "979F7295038A15DD27F75E1370DC2E2197AEE50A052D0A2A559B0B878A2EEA51"
     },
     {
       "path": "WinBridge-4.0-AccessGuard.ps1",
